@@ -9,6 +9,7 @@ import { handleDownload } from './routes/download';
 import { handleImage } from './routes/image';
 import { handleRequestAccess } from './routes/requestAccess';
 import { handleJoinPage, handleJoinSubmit } from './routes/join';
+import { handleAdmin } from './routes/admin';
 
 export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
@@ -59,6 +60,10 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   }
   if (pathname.startsWith('/api/join/') && method === 'POST') {
     return handleJoinSubmit(request, env, decodeURIComponent(pathname.slice('/api/join/'.length)));
+  }
+
+  if (pathname === '/admin' || pathname.startsWith('/admin/') || pathname.startsWith('/api/admin/')) {
+    return handleAdmin(request, env, url);
   }
 
   return new Response('Not Found', { status: 404 });
