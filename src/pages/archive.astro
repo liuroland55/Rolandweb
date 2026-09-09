@@ -1,0 +1,62 @@
+---
+// 全站归档：按年份的纯文本索引，一屏看完，不追求视觉效果。
+import { getCollection } from 'astro:content';
+import SectionLayout from '../layouts/SectionLayout.astro';
+import { formatDate } from '../lib/format';
+
+const [essays, poems, notes, music, films, photos] = await Promise.all([
+  getCollection('essays', (e) => e.data.draft !== true),
+  getCollection('poems', (e) => e.data.draft !== true),
+  getCollection('notes', (e) => e.data.draft !== true),
+  getCollection('music', (e) => e.data.draft !== true),
+  getCollection('films', (e) => e.data.draft !== true),
+  getCollection('photos', (e) => e.data.draft !== true && e.data.visibility !== 'private'),
+]);
+
+interface Row {
+  date: Date;
+  genre: string;
+  title: string;
+  href?: string;
+}
+
+const rows: Row[] = [
+  ...essays.map((e) => ({ date: e.data.date, genre: '文章', title: e.data.title, href: `/essays/${e.id}` })),
+  ...poems.map((e) => ({ date: e.data.date, genre: '诗', title: e.data.title, href: `/poems/${e.id}` })),
+  ...notes.map((e) => ({ date: e.data.date, genre: '笔记', title: e.data.title })),
+  ...music.map((e) => ({ date: e.data.date, genre: '乐', title: e.data.title, href: '/music' })),
+  ...films.map((e) => ({ date: e.data.date, genre: '影', title: e.data.title, href: '/films' })),
+  ...photos.map((e) => ({ date: e.data.shot_at, genre: '照片', title: e.data.title, href: `/photos/${e.data.roll}` })),
+].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+const byYear = new Map<number, Row[]>();
+for (const row of rows) {
+  const y = row.date.getFullYear();
+  byYear.set(y, [...(byYear.get(y) ?? []), row]);
+}
+const years = [...byYear.keys()].sort((a, b) => b - a);
+---
+<SectionLayout
+  section="all"
+  mastheadTitle="归档"
+  mastheadMeta={`${rows.length} 条`}
+  title="归档"
+  description="全站按年份的纯文本索引。"
+>
+  <div class="archive">
+    {years.map((year) => (
+      <section class="archive-year">
+        <h2 class="archive-year__title">{year}<span class="archive-year__count">{byYear.get(year)!.length}</span></h2>
+        <ul class="archive-list">
+          {byYear.get(year)!.map((row) => (
+            <li>
+              <span class="archive-list__date">{formatDate(row.date, { withYear: false })}</span>
+              <span class="archive-list__genre">{row.genre}</span>
+              {row.href ? <a href={row.href}>{row.title}</a> : <span>{row.title}</span>}
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+  </div>
+</SectionLayout>

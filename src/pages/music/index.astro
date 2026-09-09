@@ -1,0 +1,79 @@
+---
+import { getCollection } from 'astro:content';
+import SectionLayout from '../../layouts/SectionLayout.astro';
+import AppleMusic from '../../components/content/AppleMusic.astro';
+import { formatDate } from '../../lib/format';
+
+const entries = (await getCollection('music', (e) => e.data.draft !== true)).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+);
+
+const byYear = new Map<number, typeof entries>();
+for (const entry of entries) {
+  const year = entry.data.date.getFullYear();
+  byYear.set(year, [...(byYear.get(year) ?? []), entry]);
+}
+const years = [...byYear.keys()].sort((a, b) => b - a);
+
+function stars(rating: number) {
+  const full = Math.floor(rating);
+  const half = rating - full >= 0.5;
+  return '★'.repeat(full) + (half ? '½' : '');
+}
+---
+<SectionLayout
+  section="music"
+  mastheadTitle="乐"
+  mastheadMeta={`${entries.length} 条 · 倒序`}
+  title="乐"
+  description="听录、评分与偶尔的吉他改编。"
+>
+  {years.map((year) => (
+    <section class="music-year">
+      <h2 class="section-title music-year__title">{year}</h2>
+      <div class="music-list">
+        {byYear.get(year)!.map((entry) => (
+          <article class="music-entry">
+            <div class="music-entry__head">
+              <h3 class="music-entry__title">{entry.data.title}</h3>
+              <time class="music-entry__date" datetime={entry.data.date.toISOString()}>
+                {formatDate(entry.data.date, { withYear: false })}
+              </time>
+            </div>
+            {entry.data.items && entry.data.items.length > 0 && (
+              <ul class="music-albums">
+                {entry.data.items.map((item) => (
+                  <li class="music-album">
+                    <div class="music-album__head">
+                      <span class="music-album__name">{item.album}</span>
+                      <span class="music-album__by">{item.artist} · {item.year}</span>
+                      <span class="music-album__rating">{stars(item.rating)}</span>
+                    </div>
+                    {item.comment && <p class="music-album__comment">{item.comment}</p>}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {entry.data.apple_music && (
+              <div class="music-embed">
+                <AppleMusic dark {...entry.data.apple_music} />
+              </div>
+            )}
+            {entry.data.own_recording && (
+              <div class="music-recording">
+                <div class="music-recording__head">
+                  <span>{entry.data.own_recording.title}</span>
+                  <span class="music-recording__duration">{entry.data.own_recording.duration}</span>
+                </div>
+                <audio controls preload="none" src={entry.data.own_recording.file}></audio>
+                {entry.data.own_recording.note && (
+                  <p class="music-recording__note">{entry.data.own_recording.note}</p>
+                )}
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  ))}
+</SectionLayout>

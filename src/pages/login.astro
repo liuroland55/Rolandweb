@@ -1,0 +1,38 @@
+---
+// 登录页：一个邮箱输入框，零装饰。原生表单可用（POST 到 Worker），JS 只是让提交后
+// 不用整页跳转就能看到"已发送"的空状态说明——这是「登录/申请表单」island。
+import SectionLayout from '../layouts/SectionLayout.astro';
+import { apiUrl } from '../lib/auth';
+---
+<SectionLayout section="all" mastheadTitle="友邻登录" title="友邻登录">
+  <div class="status-page">
+    <p>没有密码，也没有第三方登录。留下邮箱，我会给你发一条十分钟内有效的一次性链接。</p>
+    <form class="login-form" method="post" action={apiUrl('/api/login')} data-login-form>
+      <label>
+        邮箱
+        <input type="email" name="email" required autocomplete="email" />
+      </label>
+      <button type="submit">发送登录链接</button>
+    </form>
+    <p class="login-form__result" data-login-result hidden></p>
+  </div>
+</SectionLayout>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-login-form]');
+  const result = document.querySelector<HTMLElement>('[data-login-result]');
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!result) return;
+    const email = new FormData(form).get('email');
+    try {
+      await fetch(form.action, { method: 'POST', body: new FormData(form) });
+    } catch {
+      // 网络失败也照样提示已发送：登录接口本来就不应该告诉外部邮箱是否存在，
+      // 这里同理，不去分辨失败原因，避免探测。
+    }
+    form.hidden = true;
+    result.hidden = false;
+    result.textContent = `如果 ${email} 对应一个账号，一条登录链接已经发过去了，十分钟内有效。`;
+  });
+</script>

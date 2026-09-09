@@ -1,11 +1,115 @@
 ---
-// 临时首页：验证 Phase 2 骨架（侧栏/页脚/网格）。真正的首页版式在 Phase 4 实现后会整体替换此文件。
+// 首页：头条（整块反色）+ 诗与听录并排 + 照片条 + 短笔记两栏。
+// 每一块的数据来源都是对应 collection 里最新的一条，没有独立的"首页专属"内容。
+import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Masthead from '../components/layout/Masthead.astro';
+import { formatDate, readingTime, wordCount } from '../lib/format';
+
+function firstLines(body: string, n: number): string {
+  return body
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, n)
+    .join('\n');
+}
+
+const [essays, poems, music, photos, notes] = await Promise.all([
+  getCollection('essays', (e) => e.data.draft !== true),
+  getCollection('poems', (e) => e.data.draft !== true),
+  getCollection('music', (e) => e.data.draft !== true),
+  getCollection('photos', (e) => e.data.draft !== true && e.data.visibility !== 'private'),
+  getCollection('notes', (e) => e.data.draft !== true),
+]);
+
+const byDateDesc = <T extends { data: { date: Date } }>(list: T[]) =>
+  [...list].sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+
+const sortedEssays = byDateDesc(essays);
+const heroEssay = sortedEssays.find((e) => e.data.hero === 'inverted') ?? sortedEssays[0];
+const heroWords = heroEssay ? wordCount(heroEssay.body ?? '') : 0;
+
+const latestPoem = byDateDesc(poems)[0];
+const poemPreview = latestPoem ? firstLines(latestPoem.body ?? '', 3) : '';
+
+const latestMusic = byDateDesc(music).find((m) => m.data.items && m.data.items.length > 0);
+
+const latestRoll = byDateDesc(
+  photos.sort((a, b) => b.data.shot_at.getTime() - a.data.shot_at.getTime()),
+)[0];
+const rollTiles = latestRoll ? Array.from({ length: Math.max(0, Math.min(4, latestRoll.data.count)) }) : [];
+const rollExtra = latestRoll ? Math.max(0, latestRoll.data.count - rollTiles.length) : 0;
+
+const latestNotes = byDateDesc(notes).slice(0, 2);
 ---
 <BaseLayout section="all" title="石予" description="石予的个人网站：随笔、诗、笔记、音乐、影评与照片。">
-  <Masthead title="边注 Marginalia" meta="第 1 期 · 2026.09.09" />
-  <p style="font-family: var(--serif-cjk); margin-top: 24px; color: var(--ink);">
-    首页正在搭建中（Phase 4 完成后这里会换成头条 / 诗与听录并排 / 照片条 / 短笔记）。
-  </p>
+  <Masthead title="边注 Marginalia" meta={`第 1 期 · ${formatDate(new Date())}`} />
+
+  {heroEssay && (
+    <section class="hero">
+      <div class="hero__main">
+        <div class="hero__tag">随笔 · {formatDate(heroEssay.data.date, { withYear: false })}</div>
+        <h2 class="hero__title"><a href={`/essays/${heroEssay.id}`}>{heroEssay.data.title}</a></h2>
+        {heroEssay.data.summary && <p class="hero__summary">{heroEssay.data.summary}</p>}
+      </div>
+      <div class="hero__meta">
+        <div>{heroWords} 字</div>
+        <div>约 {readingTime(heroEssay.body ?? '')} 分钟</div>
+        {heroEssay.data.tags && <div>{heroEssay.data.tags.join(' · ')}</div>}
+        {heroEssay.data.notes && heroEssay.data.notes.length > 0 && <div>批注 {heroEssay.data.notes.length} 条</div>}
+      </div>
+    </section>
+  )}
+
+  <section class="home-split">
+    {latestPoem && (
+      <div class="home-poem">
+        <div class="home-poem__tag">诗 · {latestPoem.data.version ?? '定稿'}</div>
+        <h3 class="home-poem__title"><a href={`/poems/${latestPoem.id}`}>{latestPoem.data.title}</a></h3>
+        <p class="home-poem__lines">{poemPreview}</p>
+      </div>
+    )}
+    {latestMusic && (
+      <div class="home-listening">
+        <div class="home-listening__tag">乐 · {formatDate(latestMusic.data.date, { withYear: false })}</div>
+        <h3 class="home-listening__title"><a href="/music">{latestMusic.data.title}</a></h3>
+        <ul class="home-listening__list">
+          {latestMusic.data.items!.slice(0, 4).map((item) => (
+            <li>
+              <span class="home-listening__album">{item.album}</span>
+              <span class="home-listening__rating">{'★'.repeat(Math.floor(item.rating))}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+  </section>
+
+  {latestRoll && (
+    <section class="home-photos">
+      <div class="home-photos__title">照片 · <a href="/photos">全部相册 →</a></div>
+      <div class="home-photos__grid">
+        {rollTiles.map((_, i) => (
+          <div class="placeholder home-photos__tile">
+            <span class="placeholder__caption">#{i + 1}</span>
+          </div>
+        ))}
+        <a class="home-photos__more" href={`/photos/${latestRoll.data.roll}`}>+{rollExtra} 整卷</a>
+      </div>
+    </section>
+  )}
+
+  {latestNotes.length > 0 && (
+    <section class="home-notes">
+      <div class="note-list">
+        {latestNotes.map((note) => (
+          <article class="note-card">
+            <div class="note-card__date">{formatDate(note.data.date, { withYear: false })}</div>
+            <div class="note-card__body">{note.body}</div>
+          </article>
+        ))}
+      </div>
+    </section>
+  )}
 </BaseLayout>

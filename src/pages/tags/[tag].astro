@@ -1,0 +1,54 @@
+---
+import { getCollection } from 'astro:content';
+import SectionLayout from '../../layouts/SectionLayout.astro';
+import { formatDate } from '../../lib/format';
+
+interface Row {
+  date: Date;
+  genre: string;
+  title: string;
+  href: string;
+  tags: string[];
+}
+
+export async function getStaticPaths() {
+  const [essays, notes, music, films] = await Promise.all([
+    getCollection('essays', (e) => e.data.draft !== true),
+    getCollection('notes', (e) => e.data.draft !== true),
+    getCollection('music', (e) => e.data.draft !== true),
+    getCollection('films', (e) => e.data.draft !== true),
+  ]);
+
+  const rows: Row[] = [
+    ...essays.map((e) => ({ date: e.data.date, genre: '文章', title: e.data.title, href: `/essays/${e.id}`, tags: e.data.tags ?? [] })),
+    ...notes.map((e) => ({ date: e.data.date, genre: '笔记', title: e.data.title, href: `/notes`, tags: e.data.tags ?? [] })),
+    ...music.map((e) => ({ date: e.data.date, genre: '乐', title: e.data.title, href: `/music`, tags: e.data.tags ?? [] })),
+    ...films.map((e) => ({ date: e.data.date, genre: '影', title: e.data.title, href: `/films`, tags: e.data.tags ?? [] })),
+  ];
+
+  const tagSet = new Set(rows.flatMap((r) => r.tags));
+  return [...tagSet].map((tag) => ({
+    params: { tag },
+    props: { rows: rows.filter((r) => r.tags.includes(tag)).sort((a, b) => b.date.getTime() - a.date.getTime()) },
+  }));
+}
+
+const { tag } = Astro.params;
+const { rows } = Astro.props as { rows: Row[] };
+---
+<SectionLayout
+  section="all"
+  mastheadTitle={`标签 · ${tag}`}
+  mastheadMeta={`${rows.length} 条`}
+  title={`标签：${tag}`}
+>
+  <ul class="archive-list">
+    {rows.map((row) => (
+      <li>
+        <span class="archive-list__date">{formatDate(row.date, { withYear: false })}</span>
+        <span class="archive-list__genre">{row.genre}</span>
+        <a href={row.href}>{row.title}</a>
+      </li>
+    ))}
+  </ul>
+</SectionLayout>

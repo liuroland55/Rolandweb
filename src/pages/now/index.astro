@@ -1,0 +1,96 @@
+---
+import SectionLayout from '../../layouts/SectionLayout.astro';
+import NowCard from '../../components/content/NowCard.astro';
+import { getSortedNowEntries, isToday, NOW_PAGE_SIZE } from '../../lib/now';
+
+const allEntries = await getSortedNowEntries();
+const todayCount = allEntries.filter((e) => isToday(e.data.date)).length;
+const pageEntries = allEntries.slice(0, NOW_PAGE_SIZE);
+const hasMore = allEntries.length > NOW_PAGE_SIZE;
+
+const KINDS = ['句子', '诗行', '听到', '拍到', '代码', '书摘'] as const;
+
+const pinnedUpdated = new Date('2026-09-05');
+const pinnedDaysAgo = Math.max(0, Math.floor((Date.now() - pinnedUpdated.getTime()) / 86400000));
+---
+<SectionLayout
+  section="now"
+  mastheadTitle="此刻 Now"
+  mastheadMeta={`${allEntries.length} 条 · 今日 ${todayCount} / 倒序 · 滚动加载`}
+  title="此刻 Now"
+  description="随手记的句子、诗行草稿、正在听的专辑、随拍与代码片段。"
+>
+  <div class="now-pinned">
+    <p class="now-pinned__text">
+      这学期在写一篇关于具身认知与乐器的长论文，代码这边在重构一个小工具，进度都很慢但没停。
+    </p>
+    <div class="now-pinned__meta">
+      固定状态<br />更新于 {pinnedDaysAgo} 天前<span class="now-pinned__caret"></span>
+    </div>
+  </div>
+
+  <div class="now-filter-root">
+    <input type="radio" name="nf" id="nf-all" checked />
+    {KINDS.map((k) => <input type="radio" name="nf" id={`nf-${k}`} />)}
+
+    <div class="filter-row now-filter__tabs">
+      <label class="now-filter__tab" for="nf-all">全部</label>
+      {KINDS.map((k) => (
+        <label class="now-filter__tab" for={`nf-${k}`}>{k}</label>
+      ))}
+    </div>
+
+    <div class="now-waterfall" data-now-waterfall data-next-page="/now/2">
+      {pageEntries.map((entry) => (
+        <NowCard entry={entry} />
+      ))}
+    </div>
+  </div>
+
+  {hasMore && (
+    <nav class="now-pager" data-now-pager>
+      <a href="/now/2" data-now-next>继续加载 · 还有 {allEntries.length - NOW_PAGE_SIZE} 条 →</a>
+    </nav>
+  )}
+</SectionLayout>
+
+<script>
+  // Island 2/4：Now 无限加载。用 IntersectionObserver 观察分页链接，
+  // 靠近视口时抓取下一页静态页面的 HTML，把它的 .now-waterfall 内容搬过来，
+  // 再把"下一页"链接换成再下一页——本质上只是把用户会做的翻页动作自动化，
+  // 所以关掉 JS 时，这个链接本来就是一个可以正常点击的 /now/2 分页页面。
+  const waterfall = document.querySelector<HTMLElement>('[data-now-waterfall]');
+  const pager = document.querySelector<HTMLElement>('[data-now-pager]');
+  if (waterfall && pager) {
+    const observer = new IntersectionObserver(async (entries) => {
+      const link = pager.querySelector<HTMLAnchorElement>('[data-now-next]');
+      if (!entries[0].isIntersecting || !link) return;
+      const href = link.getAttribute('href');
+      if (!href) return;
+
+      observer.unobserve(pager);
+      try {
+        const res = await fetch(href);
+        if (!res.ok) return;
+        const html = await res.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const nextWaterfall = doc.querySelector('[data-now-waterfall]');
+        const nextPagerLink = doc.querySelector<HTMLAnchorElement>('[data-now-next]');
+
+        if (nextWaterfall) {
+          waterfall.append(...nextWaterfall.childNodes);
+        }
+        if (nextPagerLink) {
+          link.setAttribute('href', nextPagerLink.getAttribute('href') ?? href);
+          link.textContent = nextPagerLink.textContent;
+          observer.observe(pager);
+        } else {
+          link.remove();
+        }
+      } catch {
+        // 网络失败就什么都不做，链接还在，用户可以自己点。
+      }
+    });
+    observer.observe(pager);
+  }
+</script>

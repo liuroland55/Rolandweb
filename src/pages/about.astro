@@ -1,0 +1,12 @@
+---
+import { getEntry, render } from 'astro:content';
+import SectionLayout from '../layouts/SectionLayout.astro';
+
+const page = await getEntry('pages', 'about');
+const { Content } = page ? await render(page) : { Content: null };
+---
+<SectionLayout section="all" mastheadTitle="关于 About" title={page?.data.title ?? '关于'} description={page?.data.description}>
+  <div class="about-body">
+    {Content && <Content />}
+  </div>
+</SectionLayout>

@@ -13,9 +13,11 @@ export default defineConfig({
   integrations: [
     mdx(),
     sitemap({
+      // /admin 不是 Astro 路由（由 Worker 服务端渲染，见 CLAUDE.md 架构备忘），这里排除是防御性的。
+      // 私密相册（visibility: private）本来就没有对应的静态页面（getStaticPaths 里过滤掉了），
+      // 不需要在这里再按卷名排除一遍——不存在的页面自然不会出现在 sitemap 里。
       filter: (page) =>
         !page.includes('/admin') &&
-        !page.includes('/photos/') &&
         !page.endsWith('/403') &&
         !page.endsWith('/403/') &&
         !page.endsWith('/styleguide') &&

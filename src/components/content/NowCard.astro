@@ -1,0 +1,78 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { relativeTime, toISODate } from '../../lib/format';
+import AppleMusic from './AppleMusic.astro';
+
+interface Props {
+  entry: CollectionEntry<'now'>;
+}
+const { entry } = Astro.props;
+const { kind, body, ref, apple_music, visibility, date } = entry.data;
+
+const kindClass: Record<typeof kind, string> = {
+  句子: 'sentence',
+  诗行: 'poem',
+  听到: 'heard',
+  拍到: 'photo',
+  代码: 'code',
+  书摘: 'excerpt',
+};
+---
+<article class:list={['now-card', `now-card--${kindClass[kind]}`]} data-kind={kind}>
+  {kind === '诗行' ? (
+    <>
+      <pre class="now-card__poem-body">{body}</pre>
+      <div class="now-card__poem-foot">→ 可能收进一首更完整的诗</div>
+    </>
+  ) : kind === '听到' && apple_music ? (
+    <div class="now-card__heard-embed">
+      <div class="now-card__tag now-card__tag--on-embed">
+        <span>{kind}</span>
+        <time datetime={toISODate(date)}>{relativeTime(date)}</time>
+      </div>
+      <AppleMusic dark {...apple_music} />
+      {body && <p class="now-card__heard-caption">{body}</p>}
+    </div>
+  ) : kind === '听到' ? (
+    <div class="now-card__heard">
+      <div class="now-card__tag">
+        <span>{kind}</span>
+        <time datetime={toISODate(date)}>{relativeTime(date)}</time>
+      </div>
+      {ref && <div class="now-card__heard-track">{ref}</div>}
+      <p class="now-card__body">{body}</p>
+      <div class="now-card__waveform" aria-hidden="true"></div>
+    </div>
+  ) : kind === '拍到' ? (
+    <div class="now-card__photo">
+      <div class:list={['placeholder', 'now-card__photo-tile']}>
+        <span class="placeholder__caption">拍到</span>
+      </div>
+      <div class="now-card__photo-info">
+        <div class="now-card__photo-foot">
+          <span>{kind}</span>
+          <time datetime={toISODate(date)}>{relativeTime(date)}</time>
+          {visibility === 'group' && <span class="now-card__friends-only">仅好友</span>}
+        </div>
+        <p class="now-card__body">{body}</p>
+      </div>
+    </div>
+  ) : kind === '代码' ? (
+    <div class="now-card__code">
+      <div class="now-card__tag">
+        <span>{kind}</span>
+        <time datetime={toISODate(date)}>{relativeTime(date)}</time>
+      </div>
+      <pre class="now-card__code-body">{body}</pre>
+    </div>
+  ) : (
+    <div class="now-card__plain">
+      <div class="now-card__tag">
+        <span>{kind}</span>
+        <time datetime={toISODate(date)}>{relativeTime(date)}</time>
+      </div>
+      <p class="now-card__body">{body}</p>
+      {kind === '书摘' && ref && <div class="now-card__source">—— {ref}</div>}
+    </div>
+  )}
+</article>

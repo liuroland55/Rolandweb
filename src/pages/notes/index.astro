@@ -13,6 +13,7 @@ const essayTitleById = new Map(essays.map((e) => [e.id, e.data.title]));
 const rendered = await Promise.all(
   sorted.map(async (note) => ({ note, Content: (await render(note)).Content })),
 );
+const unpromotedCount = sorted.filter((n) => !n.data.promote_to).length;
 ---
 <SectionLayout
   section="notes"
@@ -21,6 +22,7 @@ const rendered = await Promise.all(
   title="笔记"
   description="随手写下的短句，攒够了就升级成一篇文章。"
 >
+  {unpromotedCount >= 3 && <p class="notes-hint">↑ 攒到第 {unpromotedCount} 条，可升级成文章</p>}
   <div class="note-list">
     {rendered.map(({ note, Content }) => (
       <article class="note-card">

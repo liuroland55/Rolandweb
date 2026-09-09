@@ -1,0 +1,45 @@
+---
+// 第 2 页起的 Now 分页。第 1 页在 now/index.astro；这里的每一页也都是完整可用的静态页面，
+// 无 JS 时点击链接就能翻页；有 JS 时 now/index.astro 的脚本会把这一页的 .now-waterfall
+// 内容整段搬过去，体验上像"继续加载"。
+import SectionLayout from '../../layouts/SectionLayout.astro';
+import NowCard from '../../components/content/NowCard.astro';
+import { getSortedNowEntries, NOW_PAGE_SIZE } from '../../lib/now';
+
+export async function getStaticPaths() {
+  const entries = await getSortedNowEntries();
+  const totalPages = Math.ceil(entries.length / NOW_PAGE_SIZE);
+  const paths = [];
+  for (let page = 2; page <= totalPages; page++) {
+    paths.push({
+      params: { page: String(page) },
+      props: {
+        pageEntries: entries.slice((page - 1) * NOW_PAGE_SIZE, page * NOW_PAGE_SIZE),
+        page,
+        totalPages,
+      },
+    });
+  }
+  return paths;
+}
+
+const { pageEntries, page, totalPages } = Astro.props;
+const hasMore = page < totalPages;
+---
+<SectionLayout
+  section="now"
+  mastheadTitle="此刻 Now"
+  mastheadMeta={`第 ${page} / ${totalPages} 页`}
+  title={`此刻 Now · 第 ${page} 页`}
+>
+  <div class="now-waterfall" data-now-waterfall>
+    {pageEntries.map((entry) => (
+      <NowCard entry={entry} />
+    ))}
+  </div>
+
+  <nav class="now-pager" data-now-pager>
+    <a href={page - 1 === 1 ? '/now' : `/now/${page - 1}`}>← 上一页</a>
+    {hasMore && <a href={`/now/${page + 1}`} data-now-next>继续加载 →</a>}
+  </nav>
+</SectionLayout>

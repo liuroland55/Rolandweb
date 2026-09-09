@@ -1,0 +1,48 @@
+---
+// 相册列表。private 卷完全不出现在这里（不进列表、不进 sitemap、不进 RSS，见 CLAUDE.md 硬约束 5）。
+// group 卷默认按"未开放"渲染——是否解锁要等 Phase 7 的会话脚本在浏览器里问过 Worker 才知道，
+// 这里给的是安全的服务端默认值，不是最终状态。
+import { getCollection } from 'astro:content';
+import SectionLayout from '../../layouts/SectionLayout.astro';
+import { formatDate } from '../../lib/format';
+
+const rolls = (await getCollection('photos', (e) => e.data.draft !== true && e.data.visibility !== 'private')).sort(
+  (a, b) => b.data.shot_at.getTime() - a.data.shot_at.getTime(),
+);
+---
+<SectionLayout
+  section="photos"
+  mastheadTitle="照片"
+  mastheadMeta={`${rolls.length} 卷`}
+  title="照片"
+  description="按卷发布的照片：公开的卷任何人都能看，友邻卷需要登录才能解锁。"
+>
+  <div class="roll-grid">
+    {rolls.map((roll) => {
+      const isPublic = roll.data.visibility === 'public';
+      const groupLabel = roll.data.groups?.join(' · ') ?? '友邻';
+      return (
+        <article class="roll-card" data-roll={roll.data.roll} data-roll-visibility={roll.data.visibility}>
+          <div class:list={['roll-card__cover', 'placeholder', !isPublic && 'roll-card__cover--locked']}>
+            <span class="placeholder__caption">{roll.data.count} 张{roll.data.film_stock ? ` · ${roll.data.film_stock}` : ''}</span>
+          </div>
+          <div class="roll-card__body">
+            <div class="roll-card__title-row">
+              <a class="roll-card__title" href={`/photos/${roll.data.roll}`}>{roll.data.title}</a>
+              <span class:list={['roll-card__badge', isPublic ? 'roll-card__badge--public' : 'roll-card__badge--locked']}>
+                {isPublic ? '公开' : '未开放'}
+              </span>
+            </div>
+            <div class="roll-card__meta">
+              {formatDate(roll.data.shot_at, { withYear: false })} ·{' '}
+              {isPublic ? `${roll.data.count} 张 · 打包下载 ${roll.data.download?.size ?? ''}` : `${roll.data.count} 张 · 仅「${groupLabel}」可见`}
+            </div>
+            {!isPublic && (
+              <a class="roll-card__request" href={`/photos/${roll.data.roll}#request-access`}>申请查看 →</a>
+            )}
+          </div>
+        </article>
+      );
+    })}
+  </div>
+</SectionLayout>

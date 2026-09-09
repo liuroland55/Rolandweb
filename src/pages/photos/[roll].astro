@@ -1,0 +1,73 @@
+---
+// 相册详情页。这里只知道"卷名/张数/可见范围"这些公开元数据（构建期数据），
+// 真实图片地址与是否已解锁，要靠 Phase 7 加的运行时脚本问 Worker 才知道——
+// 页面本身必须保持静态，签名 URL 绝不能进构建产物（硬约束 5）。
+import { getCollection } from 'astro:content';
+import SectionLayout from '../../layouts/SectionLayout.astro';
+import { formatDate } from '../../lib/format';
+import { apiUrl } from '../../lib/auth';
+
+export async function getStaticPaths() {
+  // private 卷不在这里生成页面：不存在的路由，访问即 404，比任何前端判断都可靠。
+  const rolls = await getCollection('photos', (e) => e.data.draft !== true && e.data.visibility !== 'private');
+  return rolls.map((roll) => ({ params: { roll: roll.data.roll }, props: { roll } }));
+}
+
+const { roll } = Astro.props;
+const isPublic = roll.data.visibility === 'public';
+const groupLabel = roll.data.groups?.join(' · ') ?? '友邻';
+const tiles = Array.from({ length: Math.min(roll.data.count, 60) });
+---
+<SectionLayout
+  section="photos"
+  mastheadTitle={roll.data.title}
+  mastheadMeta={`${formatDate(roll.data.shot_at, { withYear: false })} · ${roll.data.count} 张`}
+  title={roll.data.title}
+  description={`相册：${roll.data.title}`}
+>
+  <div class="roll-detail" data-roll={roll.data.roll} data-roll-visibility={roll.data.visibility}>
+    <div class="roll-detail__head">
+      <span class:list={['roll-card__badge', isPublic ? 'roll-card__badge--public' : 'roll-card__badge--locked']} data-roll-badge>
+        {isPublic ? '公开' : '未开放'}
+      </span>
+      <span class="roll-detail__count" data-roll-count>
+        {isPublic
+          ? `${roll.data.count} 张 · 打包下载 ${roll.data.download?.size ?? ''}`
+          : `${roll.data.count} 张 · 仅「${groupLabel}」可见`}
+      </span>
+      {isPublic && (
+        <a class="roll-card__request" href={apiUrl(`/api/download/${roll.data.roll}`)}>下载原图 ↓</a>
+      )}
+    </div>
+
+    <div class:list={['roll-grid', 'roll-grid--detail']} data-roll-grid>
+      {tiles.map((_, i) => (
+        <div class:list={['placeholder', 'roll-tile', !isPublic && 'roll-tile--locked']}>
+          <span class="placeholder__caption">{isPublic ? `#${i + 1}` : '未开放'}</span>
+        </div>
+      ))}
+    </div>
+
+    {!isPublic && (
+      <div class="request-access" id="request-access">
+        <p class="request-access__hint">
+          这一卷仅「{groupLabel}」可见。如果你觉得自己应该有权限看到它，可以留一句话申请。
+        </p>
+        <form class="request-access__form" method="post" action={apiUrl('/api/request-access')} data-request-form>
+          <input type="hidden" name="roll" value={roll.data.roll} />
+          <label>
+            邮箱
+            <input type="email" name="email" required />
+          </label>
+          <label>
+            附言（可选）
+            <textarea name="message" rows="3"></textarea>
+          </label>
+          <button type="submit">申请查看 →</button>
+        </form>
+      </div>
+    )}
+
+    {roll.data.friend_note && <p class="roll-detail__friend-note">{roll.data.friend_note}</p>}
+  </div>
+</SectionLayout>
