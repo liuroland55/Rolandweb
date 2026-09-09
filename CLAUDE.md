@@ -22,14 +22,33 @@
 
 ## 设计令牌（`src/styles/global.css`）
 
-见 `src/styles/global.css` 顶部 `:root` 与各 `[data-section]` 覆盖块，这是唯一的真相来源；
-不要在组件里写魔法数字，只消费变量。栏目主题覆盖表见该文件内注释。
+`src/styles/global.css` 是唯一的真相来源，组件不写魔法数字、不写 scoped `<style>`，只消费下面这些变量。
+
+```css
+:root{
+  --paper:#F9F7F1; --paper-panel:#FDFCFA; --paper-cool:#F8F8F6;
+  --ink:#14170E; --ink-meta:rgba(20,23,14,.70); --ink-quiet:rgba(20,23,14,.62);
+  --accent:oklch(.36 .075 152); --accent-ink:oklch(.34 .07 152);
+  --accent-deep:oklch(.21 .05 158); --accent-footer:oklch(.145 .03 158);
+  --accent-bright:oklch(.80 .11 152); --accent-wash:oklch(.965 .014 152);
+  --rule:oklch(.36 .075 152 / .22);
+  --on-deep:#F0F4EB; --on-deep-meta:rgba(240,244,235,.68);
+  --serif-latin:'Spectral',Georgia,serif; --serif-cjk:'Noto Serif SC',var(--serif-latin);
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --rail-w:212px; --rail-w-collapsed:48px; --main-max:1000px; --pad-x:40px; --measure:62ch;
+}
+```
+
+栏目主题只覆盖颜色类变量（`--paper*`/`--accent*`/`--ink*`），永远不碰 `--rail-w`/`--main-max`/
+`--pad-x`/`--measure` 或字号——这是「一色一栏目」硬约束的具体执行方式。五套现成主题：
+`poems`（冷白纸+深蓝）、`music`/`admin`（金属黑+条纹+sheen 动效）、`films`（暖褐）、
+`photos`（近乎无色）、`essays`/`notes`/`now`（默认绿，不覆盖）。
 
 ## 如何加一个新栏目
 
 以新增一个假想栏目 `dreams`（梦记）为例，改动应控制在：
 
-1. `src/content/config.ts`：新增一个 collection 定义（复用通用字段 + 该栏目专属字段），并加入 `export const collections`。
+1. `src/content.config.ts`：新增一个 collection 定义（复用通用字段 + 该栏目专属字段），并加入 `export const collections`。
 2. `src/styles/global.css`：新增一组 `[data-section="dreams"]{ ... }` 变量覆盖（只覆盖颜色类变量，不动栏宽/字号/页边）。
 3. `src/components/layout/Sidebar.astro`：索引列表里加一行链接（名称 + `lib/counts.ts` 里对应的计数字段）。
 4. `src/pages/dreams/index.astro`（列表页）+ 如需详情页 `src/pages/dreams/[slug].astro`，复用 `SectionLayout` / `EntryLayout`。

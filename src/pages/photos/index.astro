@@ -4,7 +4,7 @@
 // 这里给的是安全的服务端默认值，不是最终状态。
 import { getCollection } from 'astro:content';
 import SectionLayout from '../../layouts/SectionLayout.astro';
-import { formatDate } from '../../lib/format';
+import { formatDate, toISODate } from '../../lib/format';
 
 const rolls = (await getCollection('photos', (e) => e.data.draft !== true && e.data.visibility !== 'private')).sort(
   (a, b) => b.data.shot_at.getTime() - a.data.shot_at.getTime(),
@@ -37,7 +37,7 @@ const rolls = (await getCollection('photos', (e) => e.data.draft !== true && e.d
               </span>
             </div>
             <div class="roll-card__meta" data-roll-meta data-roll-meta-locked={`${roll.data.count} 张 · 仅「${groupLabel}」可见`}>
-              {formatDate(roll.data.shot_at, { withYear: false })} ·{' '}
+              <time datetime={toISODate(roll.data.shot_at)}>{formatDate(roll.data.shot_at, { withYear: false })}</time> ·{' '}
               {isPublic ? `${roll.data.count} 张 · 打包下载 ${roll.data.download?.size ?? ''}` : `${roll.data.count} 张 · 仅「${groupLabel}」可见`}
             </div>
             {!isPublic && (

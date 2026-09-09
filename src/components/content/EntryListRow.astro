@@ -1,6 +1,6 @@
 ---
 // 栏目列表的一行：复用 .entry 三栏栅格（左页边元信息 / 中标题与摘要 / 右批注提示）。
-import { formatDate } from '../../lib/format';
+import { formatDate, toISODate } from '../../lib/format';
 
 interface Props {
   href: string;
@@ -14,7 +14,7 @@ const { href, date, genre, title, summary, marginaliaCount = 0 } = Astro.props;
 ---
 <article class="entry entry-row">
   <div class="entry__meta">
-    <div>{formatDate(date, { withYear: false })}</div>
+    <time datetime={toISODate(date)}>{formatDate(date, { withYear: false })}</time>
     <div>{genre}</div>
   </div>
   <div class="entry__body">

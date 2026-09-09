@@ -164,6 +164,7 @@ h1, h2, h3, h4, p, ul, ol, dl, figure { margin: 0; }
   text-align: right;
   line-height: 1.7;
 }
+.entry__meta time { display: block; }
 .entry__body {
   font-family: var(--serif-cjk);
   font-weight: 300;
@@ -977,7 +978,7 @@ html.rail-collapsed .rail__collapsed {
   border-left: 3px solid var(--accent);
   padding: 16px 18px;
 }
-.note-card__date { font-family: var(--mono); font-size: 10px; color: var(--ink-meta); margin-bottom: 8px; }
+.note-card__date { display: block; font-family: var(--mono); font-size: 10px; color: var(--ink-meta); margin-bottom: 8px; }
 .note-card__body {
   font-family: var(--serif-cjk);
   font-weight: 300;

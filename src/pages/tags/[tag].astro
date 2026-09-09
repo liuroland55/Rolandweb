@@ -1,7 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import SectionLayout from '../../layouts/SectionLayout.astro';
-import { formatDate } from '../../lib/format';
+import { formatDate, toISODate } from '../../lib/format';
 
 interface Row {
   date: Date;
@@ -45,7 +45,7 @@ const { rows } = Astro.props as { rows: Row[] };
   <ul class="archive-list">
     {rows.map((row) => (
       <li>
-        <span class="archive-list__date">{formatDate(row.date, { withYear: false })}</span>
+        <time class="archive-list__date" datetime={toISODate(row.date)}>{formatDate(row.date, { withYear: false })}</time>
         <span class="archive-list__genre">{row.genre}</span>
         <a href={row.href}>{row.title}</a>
       </li>

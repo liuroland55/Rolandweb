@@ -1,6 +1,6 @@
 // 全站计数：供侧栏索引、页脚版权页在构建期使用。
 // 用 try/catch 兜底是因为 Phase 2（骨架组件）先于 Phase 3（内容模型）落地：
-// 在 src/content/config.ts 尚未注册某个 collection 时，getCollection 会抛错，
+// 在 src/content.config.ts 尚未注册某个 collection 时，getCollection 会抛错，
 // 此时返回空数组即可，不影响骨架页面先跑起来；Phase 3 内容落地后这里无需再改。
 import { getCollection } from 'astro:content';
 

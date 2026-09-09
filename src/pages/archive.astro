@@ -2,7 +2,7 @@
 // 全站归档：按年份的纯文本索引，一屏看完，不追求视觉效果。
 import { getCollection } from 'astro:content';
 import SectionLayout from '../layouts/SectionLayout.astro';
-import { formatDate } from '../lib/format';
+import { formatDate, toISODate } from '../lib/format';
 
 const [essays, poems, notes, music, films, photos] = await Promise.all([
   getCollection('essays', (e) => e.data.draft !== true),
@@ -50,7 +50,7 @@ const years = [...byYear.keys()].sort((a, b) => b - a);
         <ul class="archive-list">
           {byYear.get(year)!.map((row) => (
             <li>
-              <span class="archive-list__date">{formatDate(row.date, { withYear: false })}</span>
+              <time class="archive-list__date" datetime={toISODate(row.date)}>{formatDate(row.date, { withYear: false })}</time>
               <span class="archive-list__genre">{row.genre}</span>
               {row.href ? <a href={row.href}>{row.title}</a> : <span>{row.title}</span>}
             </li>
