@@ -1,0 +1,14 @@
+---
+// 页边批注。用浮动 + 负右边距把自己"挤"进 .entry 三栏栅格预留的第三栏空间，
+// 所以既可以由 EntryLayout 按 frontmatter 的 notes[] 批量渲染在正文开头，
+// 也可以被作者在 MDX 正文里手写 `<Marginalia date="09.08">…</Marginalia>`，
+// 紧跟在某一段之后，视觉上仍然落在右侧页边——不需要任何 JS 去测量位置。
+interface Props {
+  date?: string;
+}
+const { date } = Astro.props;
+---
+<aside class="marginalia-inline">
+  {date && <span class="marginalia-inline__date">{date}</span>}
+  <slot />
+</aside>

@@ -1,0 +1,52 @@
+---
+// 全站基础外壳：侧栏 + 主栏 + 页脚的两行两列网格。所有页面都经过这里，
+// 保证「侧边索引栏 + 全站页脚版权页每一页都有」这条硬约束不被绕开。
+import '../styles/global.css';
+import Sidebar from '../components/layout/Sidebar.astro';
+import SiteFooter from '../components/layout/SiteFooter.astro';
+
+interface Props {
+  section: 'all' | 'essays' | 'poems' | 'notes' | 'music' | 'films' | 'photos' | 'now' | 'admin';
+  title: string;
+  description?: string;
+  lang?: string;
+}
+
+const { section, title, description, lang = 'zh-CN' } = Astro.props;
+const siteTitle = title === '石予' ? title : `${title} · 石予`;
+---
+<html lang={lang} data-section={section}>
+  <head>
+    <meta charset="utf-8" />
+    <script is:inline>
+      // 在首次渲染前把「侧栏收起」状态应用到 <html>，避免刷新时先展开再收起的闪烁。
+      // 没有存过偏好时，只有 /now 默认收起（把宽度让给瀑布流），其余栏目默认展开。
+      (function () {
+        try {
+          var stored = localStorage.getItem('rail:collapsed');
+          var section = document.documentElement.dataset.section;
+          var collapsed = stored === null ? section === 'now' : stored === '1';
+          if (collapsed) document.documentElement.classList.add('rail-collapsed');
+        } catch (e) {}
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    {description && <meta name="description" content={description} />}
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <link rel="alternate" type="application/rss+xml" title="石予 · 全站 RSS" href="/feed.xml" />
+    <title>{siteTitle}</title>
+  </head>
+  <body data-section={section}>
+    <div class="shell">
+      <div class="rail-wrap">
+        <Sidebar current={section === 'now' || section === 'admin' ? undefined : section} />
+      </div>
+      <main class="main">
+        <slot />
+      </main>
+      <SiteFooter />
+    </div>
+  </body>
+</html>

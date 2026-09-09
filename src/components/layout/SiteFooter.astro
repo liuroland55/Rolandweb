@@ -1,0 +1,51 @@
+---
+// 全站页脚版权页。每一页都渲染，内容全部来自 counts.ts 的构建期实算。
+import { getSectionCounts, getArchiveCounts } from '../../lib/counts';
+
+const counts = await getSectionCounts();
+const archive = await getArchiveCounts();
+const years = Object.keys(archive).sort((a, b) => Number(b) - Number(a));
+---
+<footer class="site-footer">
+  <div class="site-footer__label">版权页 · COLOPHON &amp; INDEX</div>
+  <div class="site-footer__grid">
+    <div class="site-footer__about">
+      <p>学生，写哲学随笔与诗；弹电吉他，听后朋、金属、古典；写代码并整理学习笔记；给朋友拍照。</p>
+      <p class="site-footer__license">
+        本站用 Astro 生成，托管于 GitHub Pages / 正文 CC BY-NC 4.0 · 照片保留所有权利
+      </p>
+    </div>
+
+    <div class="site-footer__col">
+      <div class="site-footer__col-title">全站索引</div>
+      <ul class="site-footer__list">
+        <li>文章 {counts.essays}</li>
+        <li>诗 {counts.poems}</li>
+        <li>笔记 {counts.notes}</li>
+        <li>乐 {counts.music} · 影 {counts.films}</li>
+        <li>照片 {counts.photosPhotos}（含私相册 {counts.photosRestrictedRolls}）</li>
+      </ul>
+    </div>
+
+    <div class="site-footer__col">
+      <div class="site-footer__col-title">归档</div>
+      <ul class="site-footer__list">
+        {years.map((y) => (
+          <li>{y} · {archive[y]}</li>
+        ))}
+        <li><a href="/archive">全部年份 →</a></li>
+      </ul>
+    </div>
+
+    <div class="site-footer__col">
+      <div class="site-footer__col-title">联络与订阅</div>
+      <ul class="site-footer__list">
+        <li><a href="mailto:hello@shiyu.me">邮箱</a></li>
+        <li><a href="https://github.com/">github</a></li>
+        <li><a href="https://rateyourmusic.com/">rateyourmusic</a></li>
+        <li><a class="site-footer__rss" href="/feed.xml">RSS</a></li>
+        <li><a href="/login">友邻登录 →</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>

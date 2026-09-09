@@ -1,0 +1,13 @@
+---
+// 报头：刊名/栏目名 + 右侧期号或日期等元信息。全站唯一的大报头样式，
+// 由 SectionLayout / EntryLayout 各自传入内容，不在这里写死站名。
+interface Props {
+  title: string;
+  meta?: string;
+}
+const { title, meta } = Astro.props;
+---
+<header class="masthead">
+  <h1 class="masthead__title">{title}</h1>
+  {meta && <span class="masthead__meta">{meta}</span>}
+</header>

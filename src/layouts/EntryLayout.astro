@@ -1,0 +1,69 @@
+---
+// 详情页布局：报头 + .entry 页边栅格 + 上下篇导航。
+// 字数由调用方用 lib/format.ts 的 wordCount() 算好传进来（详情页拿得到原始正文字符串，
+// 这里只负责排版，不重复解析内容）。
+import BaseLayout from './BaseLayout.astro';
+import Masthead from '../components/layout/Masthead.astro';
+import Marginalia from '../components/content/Marginalia.astro';
+import { formatDate } from '../lib/format';
+
+interface NavLink {
+  title: string;
+  href: string;
+}
+
+interface Props {
+  section: 'essays' | 'poems' | 'notes' | 'music' | 'films' | 'photos';
+  mastheadTitle: string;
+  mastheadMeta?: string;
+  title: string;
+  description?: string;
+  date: Date | string;
+  genre: string;
+  wordCount: number;
+  notes?: { text: string; date?: string }[];
+  prev?: NavLink;
+  next?: NavLink;
+}
+
+const {
+  section,
+  mastheadTitle,
+  mastheadMeta,
+  title,
+  description,
+  date,
+  genre,
+  wordCount,
+  notes = [],
+  prev,
+  next,
+} = Astro.props;
+---
+<BaseLayout section={section} title={title} description={description}>
+  <Masthead title={mastheadTitle} meta={mastheadMeta} />
+  <article class="entry">
+    <div class="entry__meta">
+      <div>{formatDate(date, { withYear: false })}</div>
+      <div>{genre}</div>
+      <div>{wordCount} 字</div>
+    </div>
+    <div class="entry__body">
+      <h2 class="entry__title">{title}</h2>
+      {notes.map((note) => (
+        <Marginalia date={note.date}>{note.text}</Marginalia>
+      ))}
+      <slot />
+    </div>
+  </article>
+  {(prev || next) && (
+    <nav class="entry-nav" aria-label="上下篇">
+      <a class="entry-nav__link entry-nav__link--prev" href={prev?.href} aria-disabled={!prev}>
+        {prev && <><span class="entry-nav__hint">← 上一篇</span><span>{prev.title}</span></>}
+      </a>
+      <a class="entry-nav__link entry-nav__link--next" href={next?.href} aria-disabled={!next}>
+        {next && <><span class="entry-nav__hint">下一篇 →</span><span>{next.title}</span></>}
+      </a>
+    </nav>
+  )}
+</BaseLayout>

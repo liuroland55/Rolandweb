@@ -1,0 +1,27 @@
+---
+// 栏目列表页布局：报头 + 可选筛选行 + 内容。
+import BaseLayout from './BaseLayout.astro';
+import Masthead from '../components/layout/Masthead.astro';
+
+interface Props {
+  section: 'all' | 'essays' | 'poems' | 'notes' | 'music' | 'films' | 'photos' | 'now' | 'admin';
+  mastheadTitle: string;
+  mastheadMeta?: string;
+  title: string;
+  description?: string;
+}
+
+const { section, mastheadTitle, mastheadMeta, title, description } = Astro.props;
+const hasFilters = Astro.slots.has('filters');
+---
+<BaseLayout section={section} title={title} description={description}>
+  <Masthead title={mastheadTitle} meta={mastheadMeta} />
+  {hasFilters && (
+    <div class="filter-row">
+      <slot name="filters" />
+    </div>
+  )}
+  <div class="section-content">
+    <slot />
+  </div>
+</BaseLayout>

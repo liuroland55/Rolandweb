@@ -1,17 +1,11 @@
 ---
-
+// 临时首页：验证 Phase 2 骨架（侧栏/页脚/网格）。真正的首页版式在 Phase 4 实现后会整体替换此文件。
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Masthead from '../components/layout/Masthead.astro';
 ---
-
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<BaseLayout section="all" title="石予" description="石予的个人网站：随笔、诗、笔记、音乐、影评与照片。">
+  <Masthead title="边注 Marginalia" meta="第 1 期 · 2026.09.09" />
+  <p style="font-family: var(--serif-cjk); margin-top: 24px; color: var(--ink);">
+    首页正在搭建中（Phase 4 完成后这里会换成头条 / 诗与听录并排 / 照片条 / 短笔记）。
+  </p>
+</BaseLayout>

@@ -1,0 +1,131 @@
+---
+// 侧边索引栏。展开态 212px 反色纵栏；收起态 48px 竖条；<900px 退化为顶部 <details> 抽屉。
+// 收起态记忆在 localStorage（键 rail:collapsed），由 BaseLayout <head> 里的内联脚本提前应用，
+// 避免刷新闪烁；本组件只负责渲染 + 挂载「切换收起」与「拉取登录会话」两个最小 island。
+import { getSectionCounts } from '../../lib/counts';
+
+interface Props {
+  current?: 'all' | 'essays' | 'poems' | 'notes' | 'music' | 'films' | 'photos';
+}
+const { current }: Props = Astro.props;
+
+const counts = await getSectionCounts();
+
+const navItems = [
+  { key: 'all', name: '全部', href: '/', count: counts.total },
+  { key: 'essays', name: '文章', href: '/essays', count: counts.essays },
+  { key: 'poems', name: '诗', href: '/poems', count: counts.poems },
+  { key: 'notes', name: '笔记', href: '/notes', count: counts.notes },
+  { key: 'music', name: '乐', href: '/music', count: counts.music },
+  { key: 'films', name: '影', href: '/films', count: counts.films },
+  { key: 'photos', name: '照片', href: '/photos', count: counts.photosRolls },
+] as const;
+---
+<nav class="rail" aria-label="站内索引">
+  <div class="rail__expanded">
+    <div class="rail__top">
+      <a class="rail__sitename" href="/">石予</a>
+      <button type="button" class="rail__toggle" data-rail-toggle aria-label="收起侧栏">‹</button>
+    </div>
+    <div class="rail__rule"></div>
+    <div class="rail__label">索引 · INDEX</div>
+    <ul class="rail__index">
+      {navItems.map((item) => (
+        <li class={current === item.key ? 'is-current' : ''}>
+          <a href={item.href}>
+            <span class:list={['rail__name', item.key === 'poems' && 'rail__name--poem']}>{item.name}</span>
+            <span class="rail__count">{item.count}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+    <div class="rail__rule"></div>
+    <a class="rail__now" href="/now">
+      <span class="rail__now-label">Now <em>瀑布流</em></span>
+      <span class="rail__now-badge">{counts.nowNewToday} 新</span>
+    </a>
+    <div class="rail__login" data-login-slot>
+      <a href="/login">友邻登录 →</a>
+    </div>
+  </div>
+
+  <div class="rail__collapsed">
+    <button type="button" class="rail__toggle rail__toggle--open" data-rail-toggle aria-label="展开侧栏">›</button>
+    <span class="rail__vertical">石予</span>
+    <span class="rail__vertical rail__vertical--count">{counts.total} 篇</span>
+    <span class="rail__collapsed-avatar" data-login-avatar-slot aria-hidden="true"></span>
+  </div>
+</nav>
+
+<details class="rail-drawer">
+  <summary>
+    <span class="rail__sitename">石予</span>
+    <span class="rail__label">索引 · INDEX</span>
+  </summary>
+  <ul class="rail__index rail__index--drawer">
+    {navItems.map((item) => (
+      <li class={current === item.key ? 'is-current' : ''}>
+        <a href={item.href}>
+          <span class:list={['rail__name', item.key === 'poems' && 'rail__name--poem']}>{item.name}</span>
+          <span class="rail__count">{item.count}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+  <a class="rail__now" href="/now">
+    <span class="rail__now-label">Now <em>瀑布流</em></span>
+    <span class="rail__now-badge">{counts.nowNewToday} 新</span>
+  </a>
+  <div class="rail__login" data-login-slot>
+    <a href="/login">友邻登录 →</a>
+  </div>
+</details>
+
+<script>
+  // Island 1/4：侧栏收起切换。点击即切换 <html class="rail-collapsed">，写回 localStorage。
+  document.querySelectorAll<HTMLButtonElement>('[data-rail-toggle]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const collapsed = document.documentElement.classList.toggle('rail-collapsed');
+      try {
+        localStorage.setItem('rail:collapsed', collapsed ? '1' : '0');
+      } catch {
+        // 隐私模式下 localStorage 可能不可写，忽略即可，只是这次刷新不记忆。
+      }
+    });
+  });
+</script>
+
+<script>
+  // 登录状态展示：向 Worker 要一次会话，登录了就把「友邻登录 →」换成昵称与分组。
+  // 不算独立的第五个 island——是"登录/申请表单" island 在侧栏里的自然延伸（同一份会话判断逻辑）。
+  import { fetchSession } from '../../lib/auth';
+
+  fetchSession().then((result) => {
+    if (result.status !== 'ok') return;
+    const { nickname, groups, visible_rolls } = result.session;
+    const initial = nickname.slice(0, 1).toUpperCase();
+    const groupLabel = groups[0] ?? '友邻';
+
+    document.querySelectorAll<HTMLElement>('[data-login-slot]').forEach((slot) => {
+      slot.innerHTML = '';
+      const avatar = document.createElement('span');
+      avatar.className = 'rail__avatar';
+      avatar.textContent = initial;
+      const info = document.createElement('div');
+      info.className = 'rail__login-info';
+      const name = document.createElement('div');
+      name.className = 'rail__login-name';
+      name.textContent = nickname;
+      const sub = document.createElement('div');
+      sub.className = 'rail__login-sub';
+      sub.textContent = `${groupLabel} · 可见 ${visible_rolls.length} 卷私相册`;
+      info.append(name, sub);
+      slot.append(avatar, info);
+    });
+
+    document.querySelectorAll<HTMLElement>('[data-login-avatar-slot]').forEach((slot) => {
+      slot.textContent = initial;
+      slot.classList.add('rail__collapsed-avatar--filled');
+    });
+  });
+</script>
