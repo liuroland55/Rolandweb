@@ -136,15 +136,6 @@ const now = defineCollection({
   }),
 });
 
-// 演示用：新增虚构栏目「梦记」，验证加一个栏目改动量够小（见 README §3）。
-const dreams = defineCollection({
-  loader: collectionOf('dreams'),
-  schema: z.object({
-    ...commonFields,
-    lucidity: z.number().min(0).max(5).optional(),
-  }),
-});
-
 // 独立长文页面（如 /about），不进侧栏计数，也不参与归档。
 const pages = defineCollection({
   loader: collectionOf('pages'),
@@ -155,4 +146,4 @@ const pages = defineCollection({
   }),
 });
 
-export const collections = { essays, poems, notes, music, films, photos, now, pages, dreams };
+export const collections = { essays, poems, notes, music, films, photos, now, pages };

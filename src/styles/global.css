@@ -111,12 +111,6 @@ body[data-section="photos"] {
   --accent-ink: oklch(.36 .01 150);
 }
 
-/* dreams：演示用虚构栏目，紫调 */
-body[data-section="dreams"] {
-  --accent-deep: oklch(.28 .09 300);
-  --accent-ink: oklch(.40 .08 300);
-}
-
 /* ========== 基础重置 ========== */
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
