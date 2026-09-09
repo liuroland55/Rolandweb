@@ -1,0 +1,10 @@
+# 本地开发用：复制这个文件为 .dev.vars（已在 .gitignore 里，不会被提交），
+# wrangler dev 会自动读取。生产环境对应的是 GitHub Actions / Cloudflare 的 Secrets，
+# 见仓库根 README「环境变量清单」。
+
+# 不设置就退回 console 兜底实现：登录链接直接打印在 wrangler dev 的终端里。
+RESEND_API_KEY=
+
+# 签相册图片/下载链接用的密钥，本地开发随便填一个够长的随机字符串即可，例如：
+#   node -e "console.log(crypto.randomUUID()+crypto.randomUUID())"
+SIGNING_SECRET=dev-only-signing-secret-change-me

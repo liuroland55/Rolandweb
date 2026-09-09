@@ -1,0 +1,31 @@
+name = "shiyu-worker"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# 本地开发（wrangler dev，默认就是本地模式）不需要下面这些 id 是真的，
+# 随便写一个占位符即可，wrangler 会在本地建模拟的 D1/KV/R2。
+# 部署到真实 Cloudflare 账号前，用下面几条命令换成真实资源：
+#   wrangler d1 create shiyu-db
+#   wrangler kv namespace create SESSIONS
+#   wrangler r2 bucket create shiyu-photos
+# 然后把命令输出里的 id 填回这个文件。
+
+[[d1_databases]]
+binding = "DB"
+database_name = "shiyu-db"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "00000000000000000000000000000000"
+
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "shiyu-photos"
+
+[vars]
+# 非敏感配置。敏感值（RESEND_API_KEY 等）不要写在这里：本地开发放 .dev.vars，
+# 部署时放 GitHub Actions / Cloudflare 的 Secrets，见 README「环境变量清单」。
+SITE_ORIGIN = "https://shiyu.me"
+MAIL_FROM = "友邻登录 <login@shiyu.me>"
