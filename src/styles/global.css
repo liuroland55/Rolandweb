@@ -545,6 +545,63 @@ html.rail-collapsed .rail__collapsed {
   .entry-nav__link--next { text-align: left; align-items: flex-start; }
 }
 
+/* ---------- Apple Music facade ---------- */
+.am {
+  border: 1px solid var(--rule);
+  padding: 1px;
+}
+.am[data-am-dark="1"] {
+  border-color: rgba(236, 238, 232, .22);
+  background-image: repeating-linear-gradient(90deg, rgba(236, 238, 232, .28) 0 1px, transparent 1px 6px);
+}
+.am__facade {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--paper-panel);
+}
+.am[data-am-dark="1"] .am__facade { background: #171815; }
+.am__cover { width: 64px; height: 64px; flex-shrink: 0; }
+.am__cover .placeholder__caption { font-size: 8px; }
+.am__info { flex: 1; min-width: 0; }
+.am__title {
+  font-family: var(--serif-latin);
+  font-size: 15px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.am__byline {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-meta);
+  margin-top: 4px;
+}
+.am__play {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  background: var(--accent-deep);
+  color: var(--on-deep);
+  font-size: 12px;
+  cursor: pointer;
+}
+.am__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 12px 0;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--ink-meta);
+}
+.am[data-am-dark="1"] .am__foot { color: var(--on-deep-meta); }
+.am__foot a { color: var(--accent-ink); text-decoration: none; }
+.am[data-am-dark="1"] .am__foot a { color: var(--accent-bright); }
+
 /* ---------- 短笔记卡片（/notes 列表与首页共用） ---------- */
 .note-list { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .note-card {

@@ -1,0 +1,92 @@
+---
+// Apple Music facade 嵌入。默认只渲染一张静态卡片，不产生任何对 apple.com 的请求；
+// 点击播放按钮后才注入 iframe（全站仅有的四个 island 之一）。
+// provider 预留 'spotify' | 'bandcamp'：以后接入时只需要各自加一个 URL 模板函数，
+// 卡片/iframe 属性/facade 交互都可以照抄这一份。
+interface Props {
+  provider?: 'apple' | 'spotify' | 'bandcamp';
+  kind: 'song' | 'album' | 'playlist';
+  id: string;
+  i?: string;
+  slug?: string;
+  storefront?: string;
+  title: string;
+  artist?: string;
+  year?: number;
+  /** 深色外框 + theme=dark 播放器（音乐栏目/听到卡片默认深色）；白纸页传 false。 */
+  dark?: boolean;
+}
+
+const {
+  provider = 'apple',
+  kind,
+  id,
+  i,
+  slug,
+  storefront = 'us',
+  title,
+  artist,
+  year,
+  dark = true,
+} = Astro.props;
+
+function appleMusicUrl() {
+  const safeSlug = slug ?? kind;
+  const params = new URLSearchParams();
+  if (kind === 'song' && i) params.set('i', i);
+  if (dark) params.set('theme', 'dark');
+  const qs = params.toString();
+  return `https://embed.music.apple.com/${storefront}/${kind}/${encodeURIComponent(safeSlug)}/${id}${qs ? `?${qs}` : ''}`;
+}
+
+function appleMusicWebUrl() {
+  return `https://music.apple.com/${storefront}/${kind}/${encodeURIComponent(slug ?? kind)}/${id}`;
+}
+
+const embedUrl = provider === 'apple' ? appleMusicUrl() : '';
+const webUrl = provider === 'apple' ? appleMusicWebUrl() : '#';
+const height = kind === 'song' ? 175 : 450;
+const providerLabel = { apple: 'Apple Music', spotify: 'Spotify', bandcamp: 'Bandcamp' }[provider];
+---
+<div class="am" data-am-dark={dark ? '1' : '0'}>
+  <div class="am__facade" data-am-facade data-am-embed-url={embedUrl} data-am-height={height}>
+    <div class="am__cover placeholder">
+      <span class="placeholder__caption">{kind}</span>
+    </div>
+    <div class="am__info">
+      <div class="am__title">{title}</div>
+      <div class="am__byline">{[artist, year].filter(Boolean).join(' · ')}</div>
+    </div>
+    <button type="button" class="am__play" data-am-play aria-label={`加载并播放 ${title}`}>
+      ▶
+    </button>
+  </div>
+  <div class="am__foot">
+    <span>来源：{providerLabel}</span>
+    <a href={webUrl} target="_blank" rel="noopener noreferrer">在 {providerLabel} 打开 →</a>
+  </div>
+</div>
+
+<script>
+  // Island 3/4：Apple Music facade 点击加载。事件委托到 document，
+  // 无论页面上有几张卡片（比如 Now 瀑布流里好几条"听到"），这份脚本只需要注册一次。
+  document.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLElement>('[data-am-play]');
+    if (!button) return;
+    const facade = button.closest<HTMLElement>('[data-am-facade]');
+    if (!facade) return;
+    const url = facade.dataset.amEmbedUrl;
+    const height = facade.dataset.amHeight ?? '175';
+    if (!url) return;
+
+    const iframe = document.createElement('iframe');
+    iframe.src = url;
+    iframe.height = height;
+    iframe.style.cssText = 'width:100%;border:0;overflow:hidden;background:transparent;display:block';
+    iframe.allow = 'autoplay *; encrypted-media *;';
+    iframe.loading = 'lazy';
+    iframe.sandbox.value =
+      'allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation';
+    facade.replaceWith(iframe);
+  });
+</script>
