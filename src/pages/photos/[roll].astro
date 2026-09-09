@@ -49,7 +49,7 @@ const tiles = Array.from({ length: Math.min(roll.data.count, 60) });
     </div>
 
     {!isPublic && (
-      <div class="request-access" id="request-access">
+      <div class="request-access" id="request-access" data-request-access>
         <p class="request-access__hint">
           这一卷仅「{groupLabel}」可见。如果你觉得自己应该有权限看到它，可以留一句话申请。
         </p>
@@ -65,9 +65,78 @@ const tiles = Array.from({ length: Math.min(roll.data.count, 60) });
           </label>
           <button type="submit">申请查看 →</button>
         </form>
+        <p class="request-access__result" data-request-result hidden></p>
       </div>
     )}
 
     {roll.data.friend_note && <p class="roll-detail__friend-note">{roll.data.friend_note}</p>}
   </div>
 </SectionLayout>
+
+<script>
+  // 相册权限 island：问 Worker 要真实图片地址（登录 island 的延伸，见 CLAUDE.md 硬约束 7）。
+  // 公开卷也走这条路径，是因为图片地址本来就该由 Worker 在运行时下发，
+  // 不能在构建产物里出现真实文件名（硬约束 5）。
+  import { apiUrl } from '../../lib/auth';
+
+  const root = document.querySelector<HTMLElement>('[data-roll]');
+  if (root) {
+    const roll = root.dataset.roll!;
+    fetch(apiUrl(`/api/album/${roll}`), { credentials: 'include' })
+      .then(async (res) => {
+        if (!res.ok) return; // 403/404：保留服务端渲染的"未开放"占位状态
+        const data = (await res.json()) as {
+          images: { signed_url: string; caption: string }[];
+          download?: { signed_url: string };
+        };
+
+        const grid = root.querySelector('[data-roll-grid]');
+        if (grid && data.images.length > 0) {
+          grid.innerHTML = '';
+          for (const image of data.images) {
+            const img = document.createElement('img');
+            img.src = image.signed_url;
+            img.loading = 'lazy';
+            img.alt = image.caption || '';
+            img.className = 'roll-tile-img';
+            grid.append(img);
+          }
+        }
+
+        const badge = root.querySelector('[data-roll-badge]');
+        if (badge) {
+          badge.textContent = '已解锁';
+          badge.className = 'roll-card__badge roll-card__badge--public';
+        }
+        root.classList.add('roll-detail--unlocked');
+        root.querySelector('[data-request-access]')?.setAttribute('hidden', '');
+
+        if (data.download?.signed_url && !root.querySelector('[data-roll-download]')) {
+          const link = document.createElement('a');
+          link.className = 'roll-card__request';
+          link.href = data.download.signed_url;
+          link.textContent = '下载原图 ↓';
+          link.setAttribute('data-roll-download', '');
+          root.querySelector('.roll-detail__head')?.append(link);
+        }
+      })
+      .catch(() => {
+        // 网络失败：什么都不做，保留服务端渲染的默认状态。
+      });
+  }
+
+  const form = document.querySelector<HTMLFormElement>('[data-request-form]');
+  const result = document.querySelector<HTMLElement>('[data-request-result]');
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!result) return;
+    try {
+      await fetch(form.action, { method: 'POST', body: new FormData(form) });
+    } catch {
+      // 忽略网络错误，提示语一视同仁——不用去分辨失败原因。
+    }
+    form.hidden = true;
+    result.hidden = false;
+    result.textContent = '申请已经发出去了，等我看到会处理。';
+  });
+</script>

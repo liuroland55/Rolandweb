@@ -844,6 +844,9 @@ html.rail-collapsed .rail__collapsed {
 .roll-grid--detail { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 .roll-tile { aspect-ratio: 3 / 2; }
 .roll-tile--locked { filter: blur(1.5px); }
+.roll-tile-img { aspect-ratio: 3 / 2; width: 100%; object-fit: cover; }
+.roll-detail--unlocked { background: var(--accent-deep); color: var(--on-deep); padding: 24px; margin: 0 calc(-1 * var(--pad-x)); padding-left: var(--pad-x); padding-right: var(--pad-x); }
+.roll-detail--unlocked .roll-detail__count { color: var(--on-deep-meta); }
 .roll-detail__friend-note {
   margin-top: 24px;
   font-family: var(--serif-latin);
@@ -855,10 +858,12 @@ html.rail-collapsed .rail__collapsed {
 }
 .request-access { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--rule); max-width: 420px; }
 .request-access__hint { font-family: var(--serif-cjk); font-weight: 300; font-size: 14px; color: var(--ink-meta); }
+.request-access__result { margin-top: 14px; font-family: var(--serif-cjk); font-weight: 300; font-size: 14px; color: var(--accent-ink); }
 .request-access__form { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
 .request-access__form label,
 .login-form label { display: flex; flex-direction: column; gap: 6px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-meta); }
 .login-form { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; max-width: 360px; }
+.login-form__result { margin-top: 14px; color: var(--accent-ink); }
 .login-form button { align-self: flex-start; padding: 8px 16px; background: var(--accent-deep); color: var(--on-deep); border: 0; font-family: var(--mono); font-size: 11px; cursor: pointer; }
 .request-access__form input,
 .request-access__form textarea,

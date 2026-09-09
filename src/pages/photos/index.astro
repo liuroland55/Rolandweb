@@ -29,16 +29,19 @@ const rolls = (await getCollection('photos', (e) => e.data.draft !== true && e.d
           <div class="roll-card__body">
             <div class="roll-card__title-row">
               <a class="roll-card__title" href={`/photos/${roll.data.roll}`}>{roll.data.title}</a>
-              <span class:list={['roll-card__badge', isPublic ? 'roll-card__badge--public' : 'roll-card__badge--locked']}>
+              <span
+                class:list={['roll-card__badge', isPublic ? 'roll-card__badge--public' : 'roll-card__badge--locked']}
+                data-roll-badge
+              >
                 {isPublic ? '公开' : '未开放'}
               </span>
             </div>
-            <div class="roll-card__meta">
+            <div class="roll-card__meta" data-roll-meta data-roll-meta-locked={`${roll.data.count} 张 · 仅「${groupLabel}」可见`}>
               {formatDate(roll.data.shot_at, { withYear: false })} ·{' '}
               {isPublic ? `${roll.data.count} 张 · 打包下载 ${roll.data.download?.size ?? ''}` : `${roll.data.count} 张 · 仅「${groupLabel}」可见`}
             </div>
             {!isPublic && (
-              <a class="roll-card__request" href={`/photos/${roll.data.roll}#request-access`}>申请查看 →</a>
+              <a class="roll-card__request" href={`/photos/${roll.data.roll}#request-access`} data-roll-request>申请查看 →</a>
             )}
           </div>
         </article>
@@ -46,3 +49,28 @@ const rolls = (await getCollection('photos', (e) => e.data.draft !== true && e.d
     })}
   </div>
 </SectionLayout>
+
+<script>
+  // 相册权限 island（登录 island 的延伸，见 CLAUDE.md 硬约束 7）：
+  // 问一次 /api/me，把已解锁的 group 卷从"未开放"换成"已解锁"外观。
+  // 没问到、或者不在可见列表里，就保持服务端渲染的安全默认值不动。
+  import { fetchSession, canSeeRoll } from '../../lib/auth';
+
+  fetchSession().then((result) => {
+    if (result.status !== 'ok') return;
+    document.querySelectorAll<HTMLElement>('[data-roll][data-roll-visibility="group"]').forEach((card) => {
+      const roll = card.dataset.roll;
+      if (!roll || !canSeeRoll(result.session, roll)) return;
+
+      const badge = card.querySelector<HTMLElement>('[data-roll-badge]');
+      if (badge) {
+        badge.textContent = '已解锁';
+        badge.classList.remove('roll-card__badge--locked');
+        badge.classList.add('roll-card__badge--public');
+      }
+      card.querySelector('.roll-card__cover--locked')?.classList.remove('roll-card__cover--locked');
+      card.querySelector('[data-roll-request]')?.remove();
+      card.classList.add('roll-card--unlocked');
+    });
+  });
+</script>
