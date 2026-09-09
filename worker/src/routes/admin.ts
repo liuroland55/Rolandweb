@@ -269,10 +269,12 @@ async function renderDashboard(env: Env, error: string): Promise<Response> {
      </div>
 
      <h3>用户</h3>
-     <table>
-       <thead><tr><th>昵称 / 邮箱</th><th>分组</th><th>角色</th><th>最近登录</th><th>操作</th></tr></thead>
-       <tbody>${requestRows}${userRows}</tbody>
-     </table>
+     <div style="overflow-x:auto">
+       <table>
+         <thead><tr><th>昵称 / 邮箱</th><th>分组</th><th>角色</th><th>最近登录</th><th>操作</th></tr></thead>
+         <tbody>${requestRows}${userRows}</tbody>
+       </table>
+     </div>
 
      <h3 style="margin-top:32px">生成邀请链接</h3>
      <form method="post" action="/admin/invites">
@@ -286,10 +288,12 @@ async function renderDashboard(env: Env, error: string): Promise<Response> {
      <div style="margin-top:16px">${inviteCards}</div>
 
      <h3 style="margin-top:32px">相册可见性</h3>
-     <table>
-       <thead><tr><th>卷</th><th>张数</th><th>可见范围</th></tr></thead>
-       <tbody>${albumRows}</tbody>
-     </table>`,
+     <div style="overflow-x:auto">
+       <table>
+         <thead><tr><th>卷</th><th>张数</th><th>可见范围</th></tr></thead>
+         <tbody>${albumRows}</tbody>
+       </table>
+     </div>`,
     { admin: true },
   );
 }
