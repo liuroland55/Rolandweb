@@ -545,6 +545,93 @@ html.rail-collapsed .rail__collapsed {
   .entry-nav__link--next { text-align: left; align-items: flex-start; }
 }
 
+/* ---------- 短笔记卡片（/notes 列表与首页共用） ---------- */
+.note-list { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.note-card {
+  background: var(--accent-wash);
+  border-left: 3px solid var(--accent);
+  padding: 16px 18px;
+}
+.note-card__date { font-family: var(--mono); font-size: 10px; color: var(--ink-meta); margin-bottom: 8px; }
+.note-card__body {
+  font-family: var(--serif-cjk);
+  font-weight: 300;
+  font-size: 14.5px;
+  line-height: 1.8;
+  color: var(--ink);
+}
+.note-card__body p:first-child { margin-top: 0; }
+.note-card__promoted {
+  display: inline-block;
+  margin-top: 10px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--accent-ink);
+  text-decoration: none;
+}
+@media (max-width: 700px) {
+  .note-list { grid-template-columns: 1fr; }
+}
+
+/* ---------- 诗歌页：行距更松，保留源文件里的换行 ---------- */
+body[data-section="poems"] .entry__body { line-height: 2.25; }
+body[data-section="poems"] .entry__body p { white-space: pre-line; }
+.poem-previous {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+.poem-previous summary {
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-meta);
+}
+.poem-previous__body {
+  margin-top: 14px;
+  white-space: pre-line;
+  font-family: var(--serif-cjk);
+  font-weight: 300;
+  color: var(--ink-quiet);
+  line-height: 2.1;
+}
+
+/* ---------- 栏目列表：文章 / 诗 一条一行 ---------- */
+.entry-list { display: flex; flex-direction: column; }
+.entry-row {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.entry-row .entry__body { max-width: none; }
+.entry-row__title {
+  display: block;
+  font-family: var(--serif-cjk);
+  font-weight: 400;
+  font-size: 18px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.entry-row__title:hover { color: var(--accent-deep); }
+.entry-row__summary {
+  margin-top: 8px;
+  font-family: var(--serif-cjk);
+  font-weight: 300;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ink-meta);
+}
+.entry-row__marginalia {
+  float: none;
+  margin: 0;
+  border-left: none;
+  padding-left: 0;
+  font-family: var(--mono);
+  font-style: normal;
+  font-size: 10px;
+  color: var(--ink-quiet);
+  text-align: right;
+}
+
 /* ---------- 栏目列表页：筛选行 ---------- */
 .filter-row {
   display: flex;

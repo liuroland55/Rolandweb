@@ -1,0 +1,29 @@
+---
+import { getCollection } from 'astro:content';
+import SectionLayout from '../../layouts/SectionLayout.astro';
+import EntryListRow from '../../components/content/EntryListRow.astro';
+
+const entries = (await getCollection('essays', (e) => e.data.draft !== true)).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+);
+---
+<SectionLayout
+  section="essays"
+  mastheadTitle="文章"
+  mastheadMeta={`${entries.length} 篇 · 倒序`}
+  title="文章"
+  description="随笔与长文：工具、身体、写作方法与其他一些想清楚了的事。"
+>
+  <div class="entry-list">
+    {entries.map((entry) => (
+      <EntryListRow
+        href={`/essays/${entry.id}`}
+        date={entry.data.date}
+        genre="随笔"
+        title={entry.data.title}
+        summary={entry.data.summary}
+        marginaliaCount={entry.data.notes?.length ?? 0}
+      />
+    ))}
+  </div>
+</SectionLayout>

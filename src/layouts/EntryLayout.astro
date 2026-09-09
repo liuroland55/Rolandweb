@@ -19,8 +19,10 @@ interface Props {
   title: string;
   description?: string;
   date: Date | string;
-  genre: string;
-  wordCount: number;
+  /** 左页边元信息，日期之后的部分：默认 [体裁, "N 字"]；诗歌页传 ["稿次"] 覆盖它。 */
+  metaLines?: string[];
+  genre?: string;
+  wordCount?: number;
   notes?: { text: string; date?: string }[];
   prev?: NavLink;
   next?: NavLink;
@@ -33,20 +35,22 @@ const {
   title,
   description,
   date,
+  metaLines,
   genre,
   wordCount,
   notes = [],
   prev,
   next,
 } = Astro.props;
+
+const restMeta = metaLines ?? [genre, wordCount !== undefined ? `${wordCount} 字` : undefined].filter(Boolean);
 ---
 <BaseLayout section={section} title={title} description={description}>
   <Masthead title={mastheadTitle} meta={mastheadMeta} />
   <article class="entry">
     <div class="entry__meta">
       <div>{formatDate(date, { withYear: false })}</div>
-      <div>{genre}</div>
-      <div>{wordCount} 字</div>
+      {restMeta.map((line) => <div>{line}</div>)}
     </div>
     <div class="entry__body">
       <h2 class="entry__title">{title}</h2>

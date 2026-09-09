@@ -1,0 +1,27 @@
+---
+// 栏目列表的一行：复用 .entry 三栏栅格（左页边元信息 / 中标题与摘要 / 右批注提示）。
+import { formatDate } from '../../lib/format';
+
+interface Props {
+  href: string;
+  date: Date | string;
+  genre: string;
+  title: string;
+  summary?: string;
+  marginaliaCount?: number;
+}
+const { href, date, genre, title, summary, marginaliaCount = 0 } = Astro.props;
+---
+<article class="entry entry-row">
+  <div class="entry__meta">
+    <div>{formatDate(date, { withYear: false })}</div>
+    <div>{genre}</div>
+  </div>
+  <div class="entry__body">
+    <a class="entry-row__title" href={href}>{title}</a>
+    {summary && <p class="entry-row__summary">{summary}</p>}
+  </div>
+  <div class="entry__marginalia entry-row__marginalia">
+    {marginaliaCount > 0 && <span>{marginaliaCount} 条批注</span>}
+  </div>
+</article>

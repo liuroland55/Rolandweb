@@ -1,0 +1,27 @@
+---
+import { getCollection } from 'astro:content';
+import SectionLayout from '../../layouts/SectionLayout.astro';
+import EntryListRow from '../../components/content/EntryListRow.astro';
+
+const entries = (await getCollection('poems', (e) => e.data.draft !== true)).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+);
+---
+<SectionLayout
+  section="poems"
+  mastheadTitle="诗"
+  mastheadMeta={`${entries.length} 首 · 倒序`}
+  title="诗"
+  description="诗与稿次：有的定稿了，有的还留着上一稿的全文。"
+>
+  <div class="entry-list">
+    {entries.map((entry) => (
+      <EntryListRow
+        href={`/poems/${entry.id}`}
+        date={entry.data.date}
+        genre={entry.data.version ?? '定稿'}
+        title={entry.data.title}
+      />
+    ))}
+  </div>
+</SectionLayout>

@@ -1,0 +1,40 @@
+---
+import { getCollection, render } from 'astro:content';
+import EntryLayout from '../../layouts/EntryLayout.astro';
+
+export async function getStaticPaths() {
+  const entries = (await getCollection('poems', (e) => e.data.draft !== true)).sort(
+    (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+  );
+  return entries.map((entry, i) => ({
+    params: { slug: entry.id },
+    props: {
+      entry,
+      prev: entries[i + 1] && { title: entries[i + 1].data.title, href: `/poems/${entries[i + 1].id}` },
+      next: entries[i - 1] && { title: entries[i - 1].data.title, href: `/poems/${entries[i - 1].id}` },
+    },
+  }));
+}
+
+const { entry, prev, next } = Astro.props;
+const { Content } = await render(entry);
+---
+<EntryLayout
+  section="poems"
+  mastheadTitle="诗"
+  mastheadMeta={entry.data.title}
+  title={entry.data.title}
+  date={entry.data.date}
+  metaLines={[entry.data.version ?? '定稿']}
+  notes={entry.data.notes}
+  prev={prev}
+  next={next}
+>
+  <Content />
+  {entry.data.previous && (
+    <details class="poem-previous">
+      <summary>查看上一稿</summary>
+      <div class="poem-previous__body">{entry.data.previous}</div>
+    </details>
+  )}
+</EntryLayout>

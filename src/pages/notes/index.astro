@@ -1,0 +1,39 @@
+---
+import { getCollection, render } from 'astro:content';
+import SectionLayout from '../../layouts/SectionLayout.astro';
+import { formatDate } from '../../lib/format';
+
+const [notes, essays] = await Promise.all([
+  getCollection('notes', (e) => e.data.draft !== true),
+  getCollection('essays'),
+]);
+const sorted = notes.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+const essayTitleById = new Map(essays.map((e) => [e.id, e.data.title]));
+
+const rendered = await Promise.all(
+  sorted.map(async (note) => ({ note, Content: (await render(note)).Content })),
+);
+---
+<SectionLayout
+  section="notes"
+  mastheadTitle="笔记"
+  mastheadMeta={`${sorted.length} 条 · 倒序`}
+  title="笔记"
+  description="随手写下的短句，攒够了就升级成一篇文章。"
+>
+  <div class="note-list">
+    {rendered.map(({ note, Content }) => (
+      <article class="note-card">
+        <div class="note-card__date">{formatDate(note.data.date, { withYear: false })}</div>
+        <div class="note-card__body">
+          <Content />
+        </div>
+        {note.data.promote_to && essayTitleById.has(note.data.promote_to) && (
+          <a class="note-card__promoted" href={`/essays/${note.data.promote_to}`}>
+            已升级为《{essayTitleById.get(note.data.promote_to)}》→
+          </a>
+        )}
+      </article>
+    ))}
+  </div>
+</SectionLayout>

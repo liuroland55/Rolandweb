@@ -1,0 +1,37 @@
+---
+import { getCollection, render } from 'astro:content';
+import EntryLayout from '../../layouts/EntryLayout.astro';
+import { wordCount } from '../../lib/format';
+
+export async function getStaticPaths() {
+  const entries = (await getCollection('essays', (e) => e.data.draft !== true)).sort(
+    (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+  );
+  return entries.map((entry, i) => ({
+    params: { slug: entry.id },
+    props: {
+      entry,
+      prev: entries[i + 1] && { title: entries[i + 1].data.title, href: `/essays/${entries[i + 1].id}` },
+      next: entries[i - 1] && { title: entries[i - 1].data.title, href: `/essays/${entries[i - 1].id}` },
+    },
+  }));
+}
+
+const { entry, prev, next } = Astro.props;
+const { Content } = await render(entry);
+---
+<EntryLayout
+  section="essays"
+  mastheadTitle="文章"
+  mastheadMeta={entry.data.title}
+  title={entry.data.title}
+  description={entry.data.summary}
+  date={entry.data.date}
+  genre="随笔"
+  wordCount={wordCount(entry.body ?? '')}
+  notes={entry.data.notes}
+  prev={prev}
+  next={next}
+>
+  <Content />
+</EntryLayout>
