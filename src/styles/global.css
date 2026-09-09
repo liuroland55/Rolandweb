@@ -1,0 +1,280 @@
+/*
+  设计系统唯一真相来源。
+  全站只有这一份样式表：组件不写 scoped <style>，只消费这里的变量与类名。
+  新增栏目时只允许新增一组 [data-section="x"] 变量覆盖，见 CLAUDE.md「如何加一个新栏目」。
+*/
+
+@import '@fontsource/spectral/300.css';
+@import '@fontsource/spectral/400.css';
+@import '@fontsource/spectral/500.css';
+@import '@fontsource/spectral/600.css';
+@import '@fontsource/spectral/300-italic.css';
+@import '@fontsource/spectral/400-italic.css';
+@import '@fontsource/noto-serif-sc/300.css';
+@import '@fontsource/noto-serif-sc/400.css';
+@import '@fontsource/noto-serif-sc/500.css';
+@import '@fontsource/noto-serif-sc/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+
+/* ========== 1.1 令牌 ========== */
+:root {
+  /* 纸与墨：暖柔白 */
+  --paper: #F9F7F1;          /* 页面底 */
+  --paper-panel: #FDFCFA;    /* 内页块底 */
+  --paper-cool: #F8F8F6;     /* 诗歌页专用，略偏冷 */
+  --ink: #14170E;
+  --ink-meta: rgba(20, 23, 14, .70);   /* 等宽元信息，勿更浅 */
+  --ink-quiet: rgba(20, 23, 14, .62);  /* 页边批注下限 */
+
+  /* 绿：深邃 */
+  --accent: oklch(.36 .075 152);        /* 细线、标签描边、强调字 */
+  --accent-ink: oklch(.34 .07 152);     /* 浅底上的绿色小字 */
+  --accent-deep: oklch(.21 .05 158);    /* 反色底：侧栏、头条块、按钮 */
+  --accent-footer: oklch(.145 .03 158); /* 页脚 */
+  --accent-bright: oklch(.80 .11 152);  /* 反色底上的强调/计数 */
+  --accent-wash: oklch(.965 .014 152);  /* 短笔记淡底 */
+  --rule: oklch(.36 .075 152 / .22);
+
+  /* 反色底上的字 */
+  --on-deep: #F0F4EB;
+  --on-deep-meta: rgba(240, 244, 235, .68);
+
+  /* 排版 */
+  --serif-latin: 'Spectral', Georgia, serif;
+  --serif-cjk: 'Noto Serif SC', var(--serif-latin);
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* 尺寸 */
+  --rail-w: 212px;             /* 侧栏展开 */
+  --rail-w-collapsed: 48px;
+  --main-max: 1000px;
+  --pad-x: 40px;                /* 主栏左右内边距 */
+  --measure: 62ch;              /* 正文最大宽度 */
+}
+
+/* ========== 1.2 栏目主题 ========== */
+/* essays / notes / now：沿用根变量（默认绿），不做覆盖 */
+
+/* poems：冷白纸 + 深蓝 */
+body[data-section="poems"] {
+  --paper: var(--paper-cool);
+  --accent-deep: oklch(.24 .07 252);
+  --accent-bright: oklch(.82 .09 250);
+  --accent-ink: oklch(.35 .07 252);
+}
+
+/* music / admin：金属黑 */
+body[data-section="music"],
+body[data-section="admin"] {
+  --paper: linear-gradient(180deg, #131412, #0e0f0d);
+  --ink: #ECEEE8;
+  --ink-meta: rgba(236, 238, 232, .68);
+  --rule: rgba(236, 238, 232, .14);
+  --accent-bright: oklch(.72 .1 152);
+}
+
+body[data-section="music"]::before,
+body[data-section="admin"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(90deg, rgba(236, 238, 232, .13) 0 1px, transparent 1px 5px);
+}
+
+@keyframes sheen {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+body[data-section="music"] .section-title,
+body[data-section="admin"] .section-title {
+  background-image: linear-gradient(100deg, var(--ink) 42%, var(--accent-bright) 50%, var(--ink) 58%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: sheen 9s linear infinite;
+}
+
+/* films：白纸 + 暖褐 */
+body[data-section="films"] {
+  --accent-deep: oklch(.30 .06 60);
+  --accent-ink: oklch(.38 .07 60);
+}
+
+/* photos：近乎无色，让照片出声 */
+body[data-section="photos"] {
+  --accent-ink: oklch(.36 .01 150);
+}
+
+/* ========== 基础重置 ========== */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  position: relative;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif-cjk);
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+img, svg { display: block; max-width: 100%; }
+h1, h2, h3, h4, p, ul, ol, dl, figure { margin: 0; }
+
+/* ========== 1.3 基础样式 ========== */
+
+/* 报头 */
+.masthead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--accent-deep);
+}
+.masthead__title {
+  font-family: var(--serif-latin);
+  font-weight: 300;
+  font-size: 40px;
+  letter-spacing: .01em;
+  color: var(--ink);
+}
+.masthead__meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-meta);
+  white-space: nowrap;
+}
+
+/* 页边栅格（内容页共用） */
+.entry {
+  display: grid;
+  grid-template-columns: 106px minmax(0, 1fr) 164px;
+  gap: 26px;
+}
+.entry__meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-meta);
+  text-align: right;
+  line-height: 1.7;
+}
+.entry__body {
+  font-family: var(--serif-cjk);
+  font-weight: 300;
+  font-size: 15.5px;
+  line-height: 1.95;
+  max-width: var(--measure);
+}
+.entry__marginalia {
+  font-family: var(--serif-latin);
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink-quiet);
+  border-left: 2px solid var(--rule);
+  padding-left: 12px;
+}
+
+@media (max-width: 900px) {
+  .entry {
+    display: block;
+  }
+  .entry__meta {
+    text-align: left;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .entry__marginalia {
+    margin: 1em 0 1em 1em;
+  }
+}
+
+/* 占位图 */
+.placeholder {
+  position: relative;
+  background-image: repeating-linear-gradient(135deg, #D6D2C6 0 6px, #E4E0D4 6px 12px);
+  overflow: hidden;
+}
+.placeholder__caption {
+  position: absolute;
+  left: 8px;
+  bottom: 6px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: rgba(20, 23, 14, .62);
+}
+body[data-section="music"] .placeholder,
+body[data-section="admin"] .placeholder {
+  background-image: repeating-linear-gradient(135deg, rgba(236, 238, 232, .30) 0 6px, rgba(236, 238, 232, .16) 6px 12px);
+}
+body[data-section="music"] .placeholder__caption,
+body[data-section="admin"] .placeholder__caption {
+  color: var(--on-deep-meta);
+}
+
+/* 链接 */
+a {
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: .15em;
+}
+a:hover {
+  color: var(--accent-deep);
+}
+.on-deep a,
+[data-on-deep] a {
+  color: var(--accent-bright);
+}
+.on-deep a:hover,
+[data-on-deep] a:hover {
+  color: var(--on-deep);
+}
+
+/* 动效降级 */
+@media (prefers-reduced-motion: reduce) {
+  body[data-section="music"] .section-title,
+  body[data-section="admin"] .section-title {
+    animation: none;
+    background-image: none;
+    -webkit-background-clip: initial;
+    background-clip: initial;
+    color: var(--ink);
+  }
+  .caret { animation: none; }
+  *, *::before, *::after {
+    transition: none !important;
+  }
+}
+
+/* 深色模式：白纸栏目反相；music/admin 本就是深色，不变 */
+@media (prefers-color-scheme: dark) {
+  body:not([data-section="music"]):not([data-section="admin"]) {
+    --paper: oklch(.17 .008 60);
+    --paper-panel: oklch(.20 .008 60);
+    --paper-cool: oklch(.17 .008 60);
+    --ink: #ECEEE8;
+    --ink-meta: rgba(236, 238, 232, .70);
+    --ink-quiet: rgba(236, 238, 232, .62);
+    --accent: oklch(.62 .1 152);
+    --accent-ink: oklch(.62 .1 152);
+    --accent-bright: oklch(.80 .11 152);
+    --accent-wash: oklch(.26 .03 152);
+    --rule: oklch(.62 .1 152 / .28);
+    --on-deep-meta: rgba(240, 244, 235, .68);
+  }
+  body[data-section="poems"] {
+    --accent-bright: oklch(.82 .09 250);
+    --accent-ink: oklch(.72 .09 250);
+  }
+  body[data-section="films"] {
+    --accent-ink: oklch(.68 .09 60);
+  }
+}

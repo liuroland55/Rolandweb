@@ -17,7 +17,9 @@ export default defineConfig({
         !page.includes('/admin') &&
         !page.includes('/photos/') &&
         !page.endsWith('/403') &&
-        !page.endsWith('/403/'),
+        !page.endsWith('/403/') &&
+        !page.endsWith('/styleguide') &&
+        !page.endsWith('/styleguide/'),
     }),
   ],
 });

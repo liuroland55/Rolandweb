@@ -1,0 +1,100 @@
+---
+// 设计系统自检页：渲染令牌、报头、页边栅格与五种栏目主题。
+// 不进 sitemap（见 astro.config.mjs 的 filter），仅供开发时核对。
+import '../styles/global.css';
+
+const tokens = [
+  ['--paper', '#F9F7F1'],
+  ['--paper-panel', '#FDFCFA'],
+  ['--paper-cool', '#F8F8F6'],
+  ['--ink', '#14170E'],
+  ['--ink-meta', 'rgba(20,23,14,.70)'],
+  ['--ink-quiet', 'rgba(20,23,14,.62)'],
+  ['--accent', 'oklch(.36 .075 152)'],
+  ['--accent-ink', 'oklch(.34 .07 152)'],
+  ['--accent-deep', 'oklch(.21 .05 158)'],
+  ['--accent-footer', 'oklch(.145 .03 158)'],
+  ['--accent-bright', 'oklch(.80 .11 152)'],
+  ['--accent-wash', 'oklch(.965 .014 152)'],
+];
+
+const sections = ['essays', 'poems', 'music', 'films', 'photos'] as const;
+---
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width" />
+  <meta name="robots" content="noindex" />
+  <title>styleguide</title>
+</head>
+<body data-section="essays">
+  <main style="padding: 40px; max-width: 1000px; margin: 0 auto;">
+    <h1 style="font-family: var(--serif-latin); font-weight:300;">设计系统自检</h1>
+
+    <section style="margin-top: 32px;">
+      <h2 style="font-family: var(--mono); font-size: 13px; letter-spacing:.08em;">1. 令牌色板</h2>
+      <div style="display:flex; flex-wrap:wrap; gap:12px; margin-top: 12px;">
+        {tokens.map(([name, val]) => (
+          <div style="width: 140px;">
+            <div style={`height:56px; background:${val}; border:1px solid rgba(0,0,0,.1);`}></div>
+            <div style="font-family: var(--mono); font-size: 9.5px; margin-top:4px;">{name}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section style="margin-top: 48px;">
+      <h2 style="font-family: var(--mono); font-size: 13px; letter-spacing:.08em;">2. 报头 .masthead</h2>
+      <div class="masthead" style="margin-top:12px;">
+        <span class="masthead__title">边注 Marginalia</span>
+        <span class="masthead__meta">第 36 期 · 2026-09-09</span>
+      </div>
+    </section>
+
+    <section style="margin-top: 48px;">
+      <h2 style="font-family: var(--mono); font-size: 13px; letter-spacing:.08em;">3. 页边栅格 .entry</h2>
+      <div class="entry" style="margin-top:12px;">
+        <div class="entry__meta">
+          09.08<br />随笔<br />1204 字
+        </div>
+        <div class="entry__body">
+          工具、乐器与手：论一件东西如何变成身体的一部分。当指尖不再意识到品丝的存在，
+          乐器才真正开始说话——这与写代码时手指不再意识到键位是同一件事。
+        </div>
+        <div class="entry__marginalia">
+          第二稿末句是「等它砸下来」，太狠了。
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-top: 48px;">
+      <h2 style="font-family: var(--mono); font-size: 13px; letter-spacing:.08em;">4. 占位图 .placeholder</h2>
+      <div class="placeholder" style="width:240px; height:160px; margin-top:12px;">
+        <span class="placeholder__caption">36 张 · 400TX</span>
+      </div>
+    </section>
+
+    <section style="margin-top: 48px; margin-bottom: 80px;">
+      <h2 style="font-family: var(--mono); font-size: 13px; letter-spacing:.08em;">5. 五种栏目主题</h2>
+      <div style="display:flex; flex-direction:column; gap:16px; margin-top:12px;">
+        {sections.map((s) => (
+          <div data-section={s} style="padding:20px; background: var(--paper); border:1px solid rgba(0,0,0,.08);">
+            <div class="section-title" style="font-family: var(--serif-latin); font-size:24px; font-weight:300;">
+              [data-section="{s}"]
+            </div>
+            <p style="font-family: var(--serif-cjk); color: var(--ink); margin-top:8px;">
+              正文示例文字 Sample text 123
+            </p>
+            <p style="font-family: var(--mono); font-size:10px; color: var(--ink-meta); margin-top:4px;">
+              09.08 · 元信息示例
+            </p>
+            <div style="margin-top:10px; padding:14px; background: var(--accent-deep); color: var(--on-deep);" data-on-deep>
+              反色块 · <a href="#">链接示例</a> · <span style={`color:${'var(--accent-bright)'}`}>强调计数 12</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  </main>
+</body>
+</html>
