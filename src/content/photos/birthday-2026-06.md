@@ -5,7 +5,6 @@ roll: birthday-2026-06
 shot_at: 2026-06-18
 count: 24
 visibility: group
-groups: [好友组]
 download:
   size: 142MB
 friend_note: 这卷很多都是虚焦，但那天大家都很开心，将就着看。

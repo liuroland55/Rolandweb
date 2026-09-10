@@ -5,7 +5,6 @@ roll: southern-summer
 shot_at: 2026-07-05
 count: 18
 visibility: group
-groups: [南方组]
 download:
   size: 96MB
 friend_note: 记得那几天一直在下雨。

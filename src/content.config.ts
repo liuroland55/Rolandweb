@@ -116,8 +116,10 @@ const photos = defineCollection({
     shot_at: z.coerce.date(),
     count: z.number(),
     cover: z.string().optional(),
+    // 卷所属的分组只在 Worker 的 D1（album_groups 表）里判权限，不进 Astro 内容集合、
+    // 不进 git：分组名字属于站点管理信息，即使不渲染出来，写进公开仓库的文件里
+    // 也算泄露（见跟站主的讨论）。这里只留最粗粒度的可见范围三态。
     visibility: z.enum(['public', 'group', 'private']),
-    groups: z.array(z.string()).optional(),
     download: z.object({ size: z.string() }).optional(),
     friend_note: z.string().optional(),
   }),

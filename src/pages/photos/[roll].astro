@@ -15,7 +15,6 @@ export async function getStaticPaths() {
 
 const { roll } = Astro.props;
 const isPublic = roll.data.visibility === 'public';
-const groupLabel = roll.data.groups?.join(' · ') ?? '友邻';
 const tiles = Array.from({ length: Math.min(roll.data.count, 60) });
 ---
 <SectionLayout
@@ -33,7 +32,7 @@ const tiles = Array.from({ length: Math.min(roll.data.count, 60) });
       <span class="roll-detail__count" data-roll-count>
         {isPublic
           ? `${roll.data.count} 张 · 打包下载 ${roll.data.download?.size ?? ''}`
-          : `${roll.data.count} 张 · 仅「${groupLabel}」可见`}
+          : `${roll.data.count} 张 · 仅好友可见`}
       </span>
       {isPublic && (
         <a class="roll-card__request" href={apiUrl(`/api/download/${roll.data.roll}`)}>下载原图 ↓</a>
@@ -51,7 +50,7 @@ const tiles = Array.from({ length: Math.min(roll.data.count, 60) });
     {!isPublic && (
       <div class="request-access" id="request-access" data-request-access>
         <p class="request-access__hint">
-          这一卷仅「{groupLabel}」可见。如果你觉得自己应该有权限看到它，可以留一句话申请。
+          这一卷仅好友可见。如果你觉得自己应该有权限看到它，可以留一句话申请。
         </p>
         <form class="request-access__form" method="post" action={apiUrl('/api/request-access')} data-request-form>
           <input type="hidden" name="roll" value={roll.data.roll} />

@@ -186,7 +186,8 @@ async function createAlbum(request: Request, env: Env): Promise<Response> {
       `visibility: ${visibility}`,
     ];
     if (filmStock) lines.push(`film_stock: ${yamlStr(filmStock)}`);
-    if (visibility === 'group' && groupName) lines.push(`groups: [${yamlStr(groupName)}]`);
+    // 分组名字不写进这个文件——那是要提交进公开仓库的，分组归属只在 D1 的
+    // album_groups 表里判权限，写进 git 就是白白让分组名字被翻出来（见硬约束 5 的精神）。
     if (downloadSize) lines.push(`download:\n  size: ${yamlStr(downloadSize)}`);
     if (friendNote) lines.push(`friend_note: ${yamlStr(friendNote)}`);
     lines.push('---', '');

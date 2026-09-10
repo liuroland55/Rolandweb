@@ -21,7 +21,6 @@ const rolls = (await getCollection('photos', (e) => e.data.draft !== true && e.d
   <div class="roll-grid">
     {rolls.map((roll) => {
       const isPublic = roll.data.visibility === 'public';
-      const groupLabel = roll.data.groups?.join(' · ') ?? '友邻';
       return (
         <article class="roll-card" data-roll={roll.data.roll} data-roll-visibility={roll.data.visibility}>
           <div class:list={['roll-card__cover', 'placeholder', !isPublic && 'roll-card__cover--locked']}>
@@ -37,9 +36,9 @@ const rolls = (await getCollection('photos', (e) => e.data.draft !== true && e.d
                 {isPublic ? '公开' : '未开放'}
               </span>
             </div>
-            <div class="roll-card__meta" data-roll-meta data-roll-meta-locked={`${roll.data.count} 张 · 仅「${groupLabel}」可见`}>
+            <div class="roll-card__meta">
               <time datetime={toISODate(roll.data.shot_at)}>{formatDate(roll.data.shot_at, { withYear: false })}</time> ·{' '}
-              {isPublic ? `${roll.data.count} 张 · 打包下载 ${roll.data.download?.size ?? ''}` : `${roll.data.count} 张 · 仅「${groupLabel}」可见`}
+              {isPublic ? `${roll.data.count} 张 · 打包下载 ${roll.data.download?.size ?? ''}` : `${roll.data.count} 张 · 仅好友可见`}
             </div>
             {!isPublic && (
               <a class="roll-card__request" href={withBase(`/photos/${roll.data.roll}#request-access`)} data-roll-request>申请查看 →</a>
