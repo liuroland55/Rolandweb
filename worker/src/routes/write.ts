@@ -11,6 +11,7 @@ import { getUserById } from '../lib/db';
 import { renderPage, escapeHtml } from '../lib/html';
 import { readBody } from '../lib/http';
 import { commitFile } from '../lib/github';
+import { yamlStr } from '../lib/yaml';
 
 const COLLECTIONS = ['essays', 'poems', 'notes', 'now', 'films', 'music'] as const;
 type Collection = (typeof COLLECTIONS)[number];
@@ -103,12 +104,6 @@ function parseValues(body: Record<string, string>): FormValues {
     body: (body.body ?? '').replace(/\r\n/g, '\n').trim(),
     items: (body.items ?? '').replace(/\r\n/g, '\n').trim(),
   };
-}
-
-// 所有标量都用 JSON.stringify 输出：合法的 JSON 字符串同时是合法的 YAML 双引号字符串，
-// 引号、冒号、井号、换行都不用另外操心。
-function yamlStr(s: string): string {
-  return JSON.stringify(s);
 }
 
 function buildFile(v: FormValues): { path: string; content: string } {

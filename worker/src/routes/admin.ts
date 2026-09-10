@@ -8,6 +8,8 @@ import { renderPage, escapeHtml } from '../lib/html';
 import { readBody } from '../lib/http';
 import { randomId, randomToken } from '../lib/crypto';
 import { workerOrigin } from '../lib/cors';
+import { commitFile } from '../lib/github';
+import { yamlStr } from '../lib/yaml';
 
 async function requireAdmin(request: Request, env: Env): Promise<UserRow | null> {
   const session = await readSession(env, request);
@@ -47,6 +49,7 @@ export async function handleAdmin(request: Request, env: Env, url: URL): Promise
     return Response.redirect(`${workerOrigin(request)}/admin`, 303);
   }
 
+  if (path === '/admin/albums' && method === 'POST') return createAlbum(request, env);
   if (path.startsWith('/admin/albums/') && path.endsWith('/visibility') && method === 'POST') {
     const roll = decodeURIComponent(path.slice('/admin/albums/'.length, -'/visibility'.length));
     return updateAlbumVisibility(request, env, roll);
@@ -126,6 +129,99 @@ async function createInvite(request: Request, env: Env): Promise<Response> {
     .run();
 
   return Response.redirect(`${workerOrigin(request)}/admin`, 303);
+}
+
+// 建一卷相册要同时动两个地方：D1 的 albums 表（Worker 判权限、签名下载用）+
+// Astro 内容集合里的一个 .md 文件（公开站渲染卡片用）。private 卷不写 git——
+// 不进 Astro 内容集合，就不会出现在任何公开列表/sitemap/RSS 里，见硬约束 5。
+// 照片本身和打包 zip 不在这里传：建完卷之后，把结果页给的 wrangler r2 命令
+// 拿去手动上传实际文件（roll 就是 R2 前缀）。
+async function createAlbum(request: Request, env: Env): Promise<Response> {
+  const admin = await requireAdmin(request, env);
+  if (!admin) return new Response('Not Found', { status: 404 });
+
+  const body = await readBody(request);
+  const roll = (body.roll ?? '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+  const title = (body.title ?? '').trim();
+  const count = Number(body.count || '0');
+  const shotAt = (body.shot_at ?? '').trim();
+  const visibility = body.visibility;
+  const groupId = body.group_id;
+  const filmStock = (body.film_stock ?? '').trim();
+  const downloadSize = (body.download_size ?? '').trim();
+  const friendNote = (body.friend_note ?? '').trim();
+
+  if (!roll) return renderDashboard(request, env, '相册 slug 不能为空（只允许 a-z 0-9 -）。');
+  if (!title) return renderDashboard(request, env, '相册标题不能为空。');
+  if (!count || count <= 0) return renderDashboard(request, env, '张数得是正整数。');
+  if (!/^\d{4}-\d{2}-\d{2}/.test(shotAt)) return renderDashboard(request, env, '拍摄日期格式不对。');
+  if (visibility !== 'public' && visibility !== 'group' && visibility !== 'private') {
+    return renderDashboard(request, env, '可见范围不对。');
+  }
+  if (visibility === 'group' && !groupId) return renderDashboard(request, env, '好友组可见需要选一个分组。');
+
+  const existingAlbum = await env.DB.prepare('SELECT roll FROM albums WHERE roll = ?').bind(roll).first();
+  if (existingAlbum) return renderDashboard(request, env, `卷「${roll}」已经存在了。`);
+
+  await env.DB.prepare('INSERT INTO albums (roll, visibility, r2_prefix, count) VALUES (?, ?, ?, ?)')
+    .bind(roll, visibility, roll, count)
+    .run();
+
+  let groupName = '';
+  if (visibility === 'group' && groupId) {
+    await env.DB.prepare('INSERT INTO album_groups (roll, group_id) VALUES (?, ?)').bind(roll, groupId).run();
+    const g = await env.DB.prepare('SELECT name FROM groups WHERE id = ?').bind(groupId).first<{ name: string }>();
+    groupName = g?.name ?? '';
+  }
+
+  let commitResult: { ok: boolean; error?: string; commitUrl?: string; path?: string } | null = null;
+  if (visibility !== 'private') {
+    const lines = [
+      '---',
+      `title: ${yamlStr(title)}`,
+      `date: ${new Date().toISOString().slice(0, 10)}`,
+      `roll: ${roll}`,
+      `shot_at: ${shotAt}`,
+      `count: ${count}`,
+      `visibility: ${visibility}`,
+    ];
+    if (filmStock) lines.push(`film_stock: ${yamlStr(filmStock)}`);
+    if (visibility === 'group' && groupName) lines.push(`groups: [${yamlStr(groupName)}]`);
+    if (downloadSize) lines.push(`download:\n  size: ${yamlStr(downloadSize)}`);
+    if (friendNote) lines.push(`friend_note: ${yamlStr(friendNote)}`);
+    lines.push('---', '');
+
+    const path = `src/content/photos/${roll}.md`;
+    const result = await commitFile(env, path, lines.join('\n'), `content(photos): ${title}`);
+    commitResult = { ...result, path };
+  }
+
+  const origin = workerOrigin(request);
+  const uploadCmds = [
+    `# 把这一卷的照片和打包 zip 传进 R2（在本地存了原图的机器上跑，仓库根的 worker/ 目录里）：`,
+    `npx.cmd wrangler r2 object put shiyu-photos/${roll}/0001.jpg --file=./0001.jpg --content-type=image/jpeg --remote`,
+    `# ...每张照片重复一遍，文件名随意，Worker 只是把 ${roll}/ 前缀下除了 download.zip 之外的都当图片列出来`,
+    `npx.cmd wrangler r2 object put shiyu-photos/${roll}/download.zip --file=./${roll}.zip --content-type=application/zip --remote`,
+  ];
+
+  return renderPage(
+    '已新建相册卷',
+    `<div class="masthead"><h1>已新建相册卷</h1><span><a href="${origin}/admin">回后台 →</a></span></div>
+     <div class="panel">
+       <p>${escapeHtml(title)}（${escapeHtml(roll)}） · ${count} 张 · ${escapeHtml(visibility)}${groupName ? ` · ${escapeHtml(groupName)}` : ''}</p>
+       ${
+         visibility === 'private'
+           ? '<p style="font-family:var(--mono);font-size:11px">private 卷不会写进仓库，只在数据库里，公开站看不到它存在。</p>'
+           : commitResult?.ok
+             ? `<p style="font-family:var(--mono);font-size:11px;word-break:break-all">${escapeHtml(commitResult.path ?? '')}</p>
+                ${commitResult.commitUrl ? `<p><a href="${escapeHtml(commitResult.commitUrl)}">查看提交 →</a></p>` : '<p style="font-family:var(--mono);font-size:11px">（未配置 GITHUB_TOKEN：文件内容已打印在 Worker 日志里，没有真的写入仓库）</p>'}`
+             : `<p style="color:#e08">写内容文件失败：${escapeHtml(commitResult?.error ?? '未知错误')}（D1 记录已经建好了，相册可见性那张表里能看到，重新提交一次内容文件就行，不用重建整条记录）</p>`
+       }
+     </div>
+     <p>照片本身和打包 zip 还没传——D1 只知道"这一卷存在、有几张"，实际文件要你自己传进 R2：</p>
+     <pre style="background:var(--paper-panel);color:var(--ink);padding:14px;overflow-x:auto;font-family:var(--mono);font-size:11px;white-space:pre-wrap">${escapeHtml(uploadCmds.join('\n'))}</pre>`,
+    { admin: true },
+  );
 }
 
 async function updateAlbumVisibility(request: Request, env: Env, roll: string): Promise<Response> {
@@ -325,7 +421,33 @@ async function renderDashboard(request: Request, env: Env, error: string): Promi
          <thead><tr><th>卷</th><th>张数</th><th>可见范围</th></tr></thead>
          <tbody>${albumRows}</tbody>
        </table>
-     </div>`,
+     </div>
+
+     <h3 style="margin-top:32px">新建相册卷</h3>
+     <p style="font-family:var(--mono);font-size:10.5px;color:var(--ink-meta);max-width:480px">
+       这里只建"元数据"（D1 记录 + 公开站要渲染的内容文件）。照片本身和打包 zip 不在这个表单里传，
+       提交后会给你几条 wrangler 命令，自己拿去把实际文件传进 R2。
+     </p>
+     <form method="post" action="/admin/albums">
+       <label>slug（roll，只允许 a-z 0-9 -，同时是 R2 前缀）<input type="text" name="roll" required placeholder="比如 birthday-2026-06" /></label>
+       <label>标题<input type="text" name="title" required placeholder="比如 生日 · 2026.06" /></label>
+       <label>张数<input type="number" name="count" required min="1" /></label>
+       <label>拍摄日期<input type="date" name="shot_at" required /></label>
+       <label>可见范围
+         <select name="visibility">
+           <option value="public">公开</option>
+           <option value="group">好友组（用下面选的分组）</option>
+           <option value="private">仅我（不进仓库，站点上不出现）</option>
+         </select>
+       </label>
+       <label>分组（可见范围选"好友组"时用）
+         <select name="group_id">${groupOptions}</select>
+       </label>
+       <label>胶片型号（可选）<input type="text" name="film_stock" /></label>
+       <label>打包下载大小标注（可选，如 218MB）<input type="text" name="download_size" /></label>
+       <label>给朋友的一句话（可选，右页边批注）<input type="text" name="friend_note" /></label>
+       <button type="submit">＋ 新建相册卷</button>
+     </form>`,
     { admin: true },
   );
 }
