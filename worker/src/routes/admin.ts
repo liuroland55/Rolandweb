@@ -55,6 +55,15 @@ export async function handleAdmin(request: Request, env: Env, url: URL): Promise
     return updateAlbumVisibility(request, env, roll);
   }
 
+  if (path.startsWith('/admin/users/') && method === 'GET') {
+    const id = decodeURIComponent(path.slice('/admin/users/'.length));
+    return renderUserEdit(env, id, '');
+  }
+  if (path.startsWith('/admin/users/') && method === 'POST') {
+    const id = decodeURIComponent(path.slice('/admin/users/'.length));
+    return updateUser(request, env, id);
+  }
+
   if (path === '/admin/export' && method === 'GET') return exportUsersCsv(env);
 
   return new Response('Not Found', { status: 404 });
@@ -225,6 +234,84 @@ async function createAlbum(request: Request, env: Env): Promise<Response> {
   );
 }
 
+// 账号管理：改角色、改分组归属。删账号没做——invites.created_by 引用了 users(id)
+// 没配级联删除，贸然删会撞外键约束；真要删人，直接在 D1 里手动处理更省事。
+async function renderUserEdit(env: Env, id: string, error: string): Promise<Response> {
+  const user = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<UserRow>();
+  if (!user) return renderPage('用户不存在', `<div class="masthead"><h1>用户不存在</h1><span><a href="/admin">回后台 →</a></span></div>`, { admin: true });
+
+  const { results: groups } = await env.DB.prepare('SELECT * FROM groups ORDER BY name').all<{ id: string; name: string }>();
+  const { results: memberships } = await env.DB.prepare('SELECT group_id FROM user_groups WHERE user_id = ?')
+    .bind(id)
+    .all<{ group_id: string }>();
+  const memberOf = new Set(memberships.map((m) => m.group_id));
+
+  return renderPage(
+    `编辑 · ${user.nickname}`,
+    `<div class="masthead"><h1>编辑用户</h1><span><a href="/admin">回后台 →</a></span></div>
+     ${error ? `<p style="color:#b3261e;font-family:var(--mono);font-size:12px">${escapeHtml(error)}</p>` : ''}
+     <div class="panel">
+       <p>${escapeHtml(user.nickname)} · ${escapeHtml(user.email)}</p>
+       <p style="font-family:var(--mono);font-size:10.5px;opacity:.75">注册于 ${escapeHtml(user.created_at.slice(0, 10))} · 最近登录 ${user.last_login_at ? escapeHtml(user.last_login_at.slice(0, 10)) : '从未'}</p>
+     </div>
+     <form method="post" action="/admin/users/${encodeURIComponent(user.id)}">
+       <label>角色
+         <select name="role">
+           <option value="member" ${user.role === 'member' ? 'selected' : ''}>member</option>
+           <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>admin</option>
+         </select>
+       </label>
+       <fieldset style="border:1px solid var(--rule);padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+         <legend style="font-family:var(--mono);font-size:10px;color:var(--ink-meta)">分组（勾选即在组内）</legend>
+         ${
+           groups.length === 0
+             ? '<p style="font-family:var(--mono);font-size:11px;opacity:.7">还没有分组。</p>'
+             : groups
+                 .map(
+                   (g) => `<label style="flex-direction:row;align-items:center;gap:8px">
+                     <input type="checkbox" name="group_ids" value="${escapeHtml(g.id)}" ${memberOf.has(g.id) ? 'checked' : ''} />${escapeHtml(g.name)}
+                   </label>`,
+                 )
+                 .join('')
+         }
+       </fieldset>
+       <button type="submit">保存</button>
+     </form>`,
+    { admin: true },
+  );
+}
+
+async function updateUser(request: Request, env: Env, id: string): Promise<Response> {
+  const admin = await requireAdmin(request, env);
+  if (!admin) return new Response('Not Found', { status: 404 });
+
+  const target = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<UserRow>();
+  if (!target) return new Response('Not Found', { status: 404 });
+
+  const form = await request.formData();
+  const role = form.get('role');
+  if (role !== 'member' && role !== 'admin') return renderUserEdit(env, id, '角色不对。');
+
+  if (role === 'member' && target.role === 'admin' && admin.id === target.id) {
+    return renderUserEdit(env, id, '不能把自己从 admin 降级——万一降完连 /admin 都进不去了，得先让另一个 admin 帮你改。');
+  }
+
+  const submittedIds = form.getAll('group_ids').filter((v): v is string => typeof v === 'string');
+  // 防御一下页面打开之后、提交之前分组被删掉的情况：只认此刻真实存在的分组 id，
+  // 不存在的悄悄丢掉，不要让一个过期的表单把整个请求撞成 500（外键约束会直接炸）。
+  const { results: validGroups } = await env.DB.prepare('SELECT id FROM groups').all<{ id: string }>();
+  const validIds = new Set(validGroups.map((g) => g.id));
+  const groupIds = submittedIds.filter((gid) => validIds.has(gid));
+
+  await env.DB.prepare('UPDATE users SET role = ? WHERE id = ?').bind(role, id).run();
+  await env.DB.prepare('DELETE FROM user_groups WHERE user_id = ?').bind(id).run();
+  for (const groupId of groupIds) {
+    await env.DB.prepare('INSERT OR IGNORE INTO user_groups (user_id, group_id) VALUES (?, ?)').bind(id, groupId).run();
+  }
+
+  return Response.redirect(`${workerOrigin(request)}/admin`, 303);
+}
+
 async function updateAlbumVisibility(request: Request, env: Env, roll: string): Promise<Response> {
   const body = await readBody(request);
   const visibility = body.visibility;
@@ -328,7 +415,7 @@ async function renderDashboard(request: Request, env: Env, error: string): Promi
         <td>${userGroups.map((g) => `<span class="badge">${escapeHtml(g)}</span>`).join(' ') || '—'}</td>
         <td>${u.role}</td>
         <td>${u.last_login_at ? escapeHtml(u.last_login_at.slice(0, 10)) : '从未'}</td>
-        <td>—</td>
+        <td><a href="/admin/users/${encodeURIComponent(u.id)}">编辑</a></td>
       </tr>`;
     })
     .join('');
