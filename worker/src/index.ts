@@ -10,6 +10,7 @@ import { handleImage } from './routes/image';
 import { handleRequestAccess } from './routes/requestAccess';
 import { handleJoinPage, handleJoinSubmit } from './routes/join';
 import { handleAdmin } from './routes/admin';
+import { handleWrite } from './routes/write';
 
 export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
@@ -65,6 +66,7 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   if (pathname === '/admin' || pathname.startsWith('/admin/') || pathname.startsWith('/api/admin/')) {
     return handleAdmin(request, env, url);
   }
+  if (pathname === '/write') return handleWrite(request, env);
 
   return new Response('Not Found', { status: 404 });
 }

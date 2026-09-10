@@ -64,7 +64,9 @@
 
 - 公开站是 Astro 静态输出，部署到 GitHub Pages。
 - 私密相册与友邻权限是 Cloudflare Worker（TypeScript + D1 + R2 + KV），与 Astro 静态站共用同一顶级域名：
-  域名 DNS 经 Cloudflare 代理，Worker Route 拦截 `/api/*`、`/admin*`、`/login`、`/join/*`（回调/表单提交所需的服务端逻辑），
-  其余路径回落到 GitHub Pages 静态源。本地开发时 Astro 站与 Worker 是两个独立进程（各自的 `npm run dev` / `wrangler dev`）。
+  域名 DNS 经 Cloudflare 代理，Worker Route 拦截 `/api/*`、`/admin*`、`/join/*`、`/write`（回调/表单提交所需的服务端逻辑），
+  其余路径回落到 GitHub Pages 静态源。
+- `/write` 是创作者界面（admin 专用，服务端渲染，零 JS）：表单生成 Markdown，经 GitHub Contents API
+  提交进 `src/content/`，由 Actions 重新部署。GitHub token 只存在 Worker Secret 里，永远不进浏览器。本地开发时 Astro 站与 Worker 是两个独立进程（各自的 `npm run dev` / `wrangler dev`）。
 - 私密数据永远不进入 Astro 的构建产物：`/photos/[roll]` 页面只包含「卷名/张数/可见范围」等公开元数据，
   真实图片地址（R2 签名 URL）只能在浏览器运行时向 Worker 请求。

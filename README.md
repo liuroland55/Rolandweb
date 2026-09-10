@@ -37,6 +37,14 @@ npm run dev
 
 ## 2. 发一篇内容（≤ 3 步）
 
+**方式 A：在浏览器里写（创作者界面）**——打开 `/write`（需要 admin 登录），选栏目、填标题、写正文、点「发布」。
+Worker 会把生成的 Markdown 文件通过 GitHub Contents API 提交进仓库的 `src/content/<栏目>/`，
+GitHub Actions 随即重新部署，一两分钟后上站。支持 文章 / 诗 / 笔记 / Now 四个高频栏目；
+乐 / 影 / 照片的 frontmatter 是嵌套结构，仍按方式 B 手写。需要先配好 `GITHUB_TOKEN`（见 §7.2），
+没配的话表单仍能用，只是文件内容打印在 Worker 日志里而不真的写仓库。
+
+**方式 B：本地写文件**
+
 1. 在对应栏目目录下新建一个 `.md`（或 `.mdx`）文件。
 2. 写 frontmatter + 正文。
 3. `git push`，GitHub Actions 自动构建部署。
@@ -224,8 +232,8 @@ GitHub Pages 的静态源。步骤大致是：
 2. 把 `public/CNAME` 里的 `shiyu.me` 换成你实际拥有的域名；同时改 `astro.config.mjs` 的 `site`。
 3. 域名 DNS 接入 Cloudflare（把 NS 记录指过去，或者用 Cloudflare Registrar），确保代理开启。
 4. `cd worker && npx wrangler deploy` 部署 Worker；然后在 Cloudflare Dashboard →
-   该域名 → Workers Routes，加一条：`shiyu.me/api/*`、`shiyu.me/admin*`、`shiyu.me/join/*`
-   都指向这个 Worker（三条 route，或者写成一条更宽的模式，按你的 Cloudflare 套餐能力来）。
+   该域名 → Workers Routes，加：`shiyu.me/api/*`、`shiyu.me/admin*`、`shiyu.me/join/*`、`shiyu.me/write`
+   都指向这个 Worker（几条 route，或者写成一条更宽的模式，按你的 Cloudflare 套餐能力来）。
 5. 首次部署前，把 `worker/wrangler.toml` 里的占位 id 换成真实资源（本地开发不需要这步）：
 
    ```sh
@@ -250,6 +258,7 @@ GitHub Pages 的静态源。步骤大致是：
 | 邮件发送 | — | `RESEND_API_KEY`（不设置则退回 console 打印，本地开发够用） |
 | 邮件发件人 | — | `MAIL_FROM`（`wrangler.toml` 的 `[vars]` 里，非敏感） |
 | 签名链接密钥 | — | `SIGNING_SECRET`（必须设置，生产环境用 `wrangler secret put SIGNING_SECRET`） |
+| 创作者界面写仓库 | — | `GITHUB_TOKEN`（fine-grained token，只授予本仓库 Contents: Read and write；不设则只打印不写）；`GITHUB_REPO` / `GITHUB_BRANCH` 在 `wrangler.toml` 的 `[vars]` 里 |
 | 站点源（构造登录链接用） | — | `SITE_ORIGIN`（`wrangler.toml` 的 `[vars]` 里） |
 
 生产环境的 `RESEND_API_KEY` / `SIGNING_SECRET` 用 `wrangler secret put <NAME>` 设置

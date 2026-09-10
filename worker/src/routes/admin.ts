@@ -261,6 +261,7 @@ async function renderDashboard(env: Env, error: string): Promise<Response> {
      </div>
      ${error ? `<p style="color:#e08">${escapeHtml(error)}</p>` : ''}
      <div style="display:flex;gap:10px;margin-bottom:20px">
+       <a href="/write"><button type="button">写一条 →</button></a>
        <a href="/admin/export"><button type="button" style="background:transparent;border:1px solid var(--rule);color:inherit">导出名单</button></a>
      </div>
      <div class="stat-row">

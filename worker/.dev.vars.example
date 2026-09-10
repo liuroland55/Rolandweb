@@ -8,3 +8,7 @@ RESEND_API_KEY=
 # 签相册图片/下载链接用的密钥，本地开发随便填一个够长的随机字符串即可，例如：
 #   node -e "console.log(crypto.randomUUID()+crypto.randomUUID())"
 SIGNING_SECRET=dev-only-signing-secret-change-me
+
+# 创作者界面 /write 提交内容用的 GitHub token（fine-grained token，只给这个仓库 Contents: Read and write）。
+# 不设置就退回 console 打印：表单流程照样能跑，只是不会真的写仓库。
+GITHUB_TOKEN=
