@@ -20,7 +20,11 @@ function toBase64Utf8(text: string): string {
 
 export async function commitFile(env: Env, path: string, content: string, message: string): Promise<CommitResult> {
   if (!env.GITHUB_TOKEN) {
-    console.log(`[github:console] would commit ${path}\n--- message: ${message}\n${content}\n---`);
+    // 分隔符不能用 "---"：内容本身就是带 YAML frontmatter 的 Markdown，也用 "---" 收尾，
+    // 用同一个字符串当外层包装的分隔符会跟内容自己的分隔符撞在一起，日志里分不清哪个是哪个。
+    console.log(
+      `[github:console] would commit ${path}\n===COMMIT MESSAGE===\n${message}\n===FILE CONTENT===\n${content}\n===END===`,
+    );
     return { ok: true, path, commitUrl: undefined };
   }
 

@@ -26,6 +26,8 @@ export async function handleAdmin(request: Request, env: Env, url: URL): Promise
 
   if (path === '/admin' && method === 'GET') return renderDashboard(request, env, '');
 
+  if (path === '/admin/groups' && method === 'POST') return createGroup(request, env);
+
   if (path === '/admin/invites' && method === 'POST') return createInvite(request, env);
   if (path.startsWith('/admin/invites/') && path.endsWith('/revoke') && method === 'POST') {
     const token = path.slice('/admin/invites/'.length, -'/revoke'.length);
@@ -85,6 +87,24 @@ async function approveRequest(request: Request, env: Env, id: string): Promise<R
   await env.DB.prepare("UPDATE requests SET status = 'approved' WHERE id = ?").bind(id).run();
 
   return Response.redirect(backToAdmin, 303);
+}
+
+async function createGroup(request: Request, env: Env): Promise<Response> {
+  const admin = await requireAdmin(request, env);
+  if (!admin) return new Response('Not Found', { status: 404 });
+
+  const body = await readBody(request);
+  const name = (body.name ?? '').trim();
+  if (!name) return renderDashboard(request, env, '分组名字不能为空。');
+
+  const existing = await env.DB.prepare('SELECT id FROM groups WHERE name = ?').bind(name).first();
+  if (existing) return renderDashboard(request, env, `分组「${name}」已经存在了。`);
+
+  await env.DB.prepare('INSERT INTO groups (id, name, created_at) VALUES (?, ?, ?)')
+    .bind(randomId(), name, new Date().toISOString())
+    .run();
+
+  return Response.redirect(`${workerOrigin(request)}/admin`, 303);
 }
 
 async function createInvite(request: Request, env: Env): Promise<Response> {
@@ -280,7 +300,14 @@ async function renderDashboard(request: Request, env: Env, error: string): Promi
        </table>
      </div>
 
+     <h3 style="margin-top:32px">新建分组</h3>
+     <form method="post" action="/admin/groups">
+       <label>分组名字<input type="text" name="name" required placeholder="比如：好友组 / 南方组" /></label>
+       <button type="submit">＋ 新建分组</button>
+     </form>
+
      <h3 style="margin-top:32px">生成邀请链接</h3>
+     ${groups.length === 0 ? '<p style="font-family:var(--mono);font-size:11px;opacity:.7">还没有分组，先新建一个。</p>' : `
      <form method="post" action="/admin/invites">
        <label>分组
          <select name="group_id">${groupOptions}</select>
@@ -290,6 +317,7 @@ async function renderDashboard(request: Request, env: Env, error: string): Promi
        <button type="submit">＋ 生成邀请链接</button>
      </form>
      <div style="margin-top:16px">${inviteCards}</div>
+     `}
 
      <h3 style="margin-top:32px">相册可见性</h3>
      <div style="overflow-x:auto">

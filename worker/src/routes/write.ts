@@ -1,8 +1,10 @@
-// 创作者界面 /write：在浏览器里用一个表单发一条内容（文章 / 诗 / 笔记 / Now），
+// 创作者界面 /write：在浏览器里用一个表单发一条内容（文章 / 诗 / 笔记 / Now / 影 / 乐），
 // 提交后由 Worker 把 Markdown 文件写进仓库的 src/content/<collection>/，
 // GitHub Actions 随即重新构建部署。和 /admin 一样：仅 admin 可见（否则 404），
 // 整页服务端渲染，原生 <form method="post">，零客户端 JS，GitHub token 只在 Worker 里。
-// 乐 / 影 / 照片的 frontmatter 是嵌套结构（items / apple_music / roll），仍然走 git 直接写文件。
+// 影/乐的评分列表（items）是"一行一条"的简单格式，见 parseItemLines；
+// 乐的 apple_music / own_recording 这两个更复杂的嵌套字段没做表单，还是手改文件；
+// 照片是完全不同的东西（要连带 D1 的 albums 表和 R2 里的实际文件），不在这个表单里。
 import type { Env } from '../env';
 import { readSession } from '../lib/session';
 import { getUserById } from '../lib/db';
@@ -10,11 +12,13 @@ import { renderPage, escapeHtml } from '../lib/html';
 import { readBody } from '../lib/http';
 import { commitFile } from '../lib/github';
 
-const COLLECTIONS = ['essays', 'poems', 'notes', 'now'] as const;
+const COLLECTIONS = ['essays', 'poems', 'notes', 'now', 'films', 'music'] as const;
 type Collection = (typeof COLLECTIONS)[number];
 const KINDS = ['句子', '诗行', '听到', '拍到', '代码', '书摘'] as const;
 
-const LABEL: Record<Collection, string> = { essays: '文章', poems: '诗', notes: '笔记', now: 'Now' };
+const LABEL: Record<Collection, string> = {
+  essays: '文章', poems: '诗', notes: '笔记', now: 'Now', films: '影', music: '乐',
+};
 
 interface FormValues {
   collection: Collection;
@@ -30,6 +34,38 @@ interface FormValues {
   kind: string;
   ref: string;
   body: string;
+  items: string;
+}
+
+interface RatedItem {
+  name: string;
+  sub?: string;
+  year?: number;
+  rating: number;
+  comment?: string;
+}
+
+// 影/乐的评分列表用"一行一条、竖线分隔"的格式，不做动态加行的 JS（/write 是零 JS 页面）：
+//   影：标题 | 导演（可留空） | 年份 | 评分 | 短评（可留空）
+//   乐：专辑 | 艺人 | 年份 | 评分 | 短评（可留空）
+// 两个栏目字段顺序刻意保持一致（name | sub | year | rating | comment），减少记混的机会。
+function parseItemLines(text: string): RatedItem[] {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      // 中文输入法很自然会打出全角的｜，两种都得认，不然整行会被当成一个字段。
+      const [name, sub, yearStr, ratingStr, comment] = line.split(/[|｜]/).map((p) => p.trim());
+      return {
+        name: name ?? '',
+        sub: sub || undefined,
+        year: yearStr ? Number(yearStr) || undefined : undefined,
+        rating: Math.min(5, Math.max(0, Number(ratingStr) || 0)),
+        comment: comment || undefined,
+      };
+    })
+    .filter((item) => item.name);
 }
 
 function nowInShanghai(): string {
@@ -44,7 +80,7 @@ function nowInShanghai(): string {
 function defaults(): FormValues {
   return {
     collection: 'now', title: '', slug: '', date: nowInShanghai(), tags: '', draft: false,
-    summary: '', hero: false, version: '', promote_to: '', kind: '句子', ref: '', body: '',
+    summary: '', hero: false, version: '', promote_to: '', kind: '句子', ref: '', body: '', items: '',
   };
 }
 
@@ -65,6 +101,7 @@ function parseValues(body: Record<string, string>): FormValues {
     kind: (KINDS as readonly string[]).includes(body.kind) ? body.kind : d.kind,
     ref: (body.ref ?? '').trim(),
     body: (body.body ?? '').replace(/\r\n/g, '\n').trim(),
+    items: (body.items ?? '').replace(/\r\n/g, '\n').trim(),
   };
 }
 
@@ -92,6 +129,29 @@ function buildFile(v: FormValues): { path: string; content: string } {
     lines.push(`body: ${yamlStr(v.body)}`);
     if (v.ref) lines.push(`ref: ${yamlStr(v.ref)}`);
   }
+  if (v.collection === 'films') {
+    lines.push('items:');
+    for (const it of parseItemLines(v.items)) {
+      lines.push(`  - title: ${yamlStr(it.name)}`);
+      lines.push(`    year: ${it.year ?? new Date(v.date).getFullYear()}`);
+      if (it.sub) lines.push(`    director: ${yamlStr(it.sub)}`);
+      lines.push(`    rating: ${it.rating}`);
+      if (it.comment) lines.push(`    comment: ${yamlStr(it.comment)}`);
+    }
+  }
+  if (v.collection === 'music') {
+    const items = parseItemLines(v.items);
+    if (items.length) {
+      lines.push('items:');
+      for (const it of items) {
+        lines.push(`  - album: ${yamlStr(it.name)}`);
+        lines.push(`    artist: ${yamlStr(it.sub ?? '')}`);
+        lines.push(`    year: ${it.year ?? new Date(v.date).getFullYear()}`);
+        lines.push(`    rating: ${it.rating}`);
+        if (it.comment) lines.push(`    comment: ${yamlStr(it.comment)}`);
+      }
+    }
+  }
   lines.push('---');
 
   const markdown = v.collection === 'now' ? '' : `\n${v.body}\n`;
@@ -117,8 +177,8 @@ function renderForm(v: FormValues, error = ''): Response {
        <label>slug（可选，只允许 a-z 0-9 -；留空按时间生成）<input type="text" name="slug" value="${escapeHtml(v.slug)}" /></label>
        <label>标签（逗号分隔；诗不给标签）<input type="text" name="tags" value="${escapeHtml(v.tags)}" /></label>
 
-       <label>正文（Now 是那一句话；其余是 Markdown）
-         <textarea name="body" rows="14" required>${escapeHtml(v.body)}</textarea>
+       <label>正文（Now 是那一句话；影/乐是可选的一段感想；其余是 Markdown）
+         <textarea name="body" rows="10" ${v.collection === 'films' || v.collection === 'music' ? '' : 'required'}>${escapeHtml(v.body)}</textarea>
        </label>
 
        <fieldset style="border:1px solid var(--rule);padding:12px 14px;display:flex;flex-direction:column;gap:10px">
@@ -131,6 +191,11 @@ function renderForm(v: FormValues, error = ''): Response {
          <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="hero" ${v.hero ? 'checked' : ''} />文章 · 首页头条整块反色（hero: inverted）</label>
          <label>诗 · 稿次（如「第三稿」）<input type="text" name="version" value="${escapeHtml(v.version)}" /></label>
          <label>笔记 · 已升级为哪篇文章（essay 的 slug）<input type="text" name="promote_to" value="${escapeHtml(v.promote_to)}" /></label>
+         <label>影 · 每行一部 / 乐 · 每行一条（同一个框，按栏目解释成不同字段：
+           影 = 标题｜导演可留空｜年份｜评分｜短评可留空；乐 = 专辑｜艺人｜年份｜评分｜短评可留空。
+           乐的 Apple Music 嵌入、吉他自录暂时还要手改文件）
+           <textarea name="items" rows="4" placeholder="影：站台｜贾樟柯｜2000｜5｜时间在这部电影里不是背景&#10;乐：Closer｜Joy Division｜1980｜5｜依旧是那种葬礼进行曲式的后朋">${escapeHtml(v.items)}</textarea>
+         </label>
        </fieldset>
 
        <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="draft" ${v.draft ? 'checked' : ''} />先存为草稿（draft: true，不上站）</label>
@@ -150,7 +215,10 @@ export async function handleWrite(request: Request, env: Env): Promise<Response>
 
   const v = parseValues(await readBody(request));
   if (!v.title) return renderForm(v, '标题不能为空。');
-  if (!v.body) return renderForm(v, '正文不能为空。');
+  if (v.collection !== 'films' && v.collection !== 'music' && !v.body) return renderForm(v, '正文不能为空。');
+  if (v.collection === 'films' && parseItemLines(v.items).length === 0) {
+    return renderForm(v, '影至少要有一行（标题｜导演｜年份｜评分｜短评）。');
+  }
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v.date)) return renderForm(v, '时间格式不对。');
 
   const { path, content } = buildFile(v);
