@@ -30,8 +30,9 @@ npm run dev
 ```
 
 两边默认跑在不同端口，`src/lib/auth.ts` 里的 `PUBLIC_API_BASE` 环境变量决定前端去哪问会话：
-本地开发在仓库根建一个 `.env` 写 `PUBLIC_API_BASE=http://127.0.0.1:8787`；
-生产环境留空即可（见下面「同一顶级域名」的说明）。
+本地开发在仓库根建一个 `.env` 写 `PUBLIC_API_BASE=http://127.0.0.1:8787`。
+**生产环境这个变量必须填 Worker 的真实地址，不能留空**——见 §7.1，当前部署没有自定义域名，
+站点和 Worker 是两个不同的源。
 
 ---
 
@@ -185,9 +186,9 @@ body[data-section="dreams"] {
 
 ## 5. 加一个朋友
 
-1. 登录 `/admin`（需要你的账号 `role=admin`）。
+1. 登录 Worker 的 `/admin`（`https://<你的 worker 地址>/admin`，需要你的账号 `role=admin`）。
 2. 「生成邀请链接」卡片：选分组、填有效期与可用次数，提交。
-3. 复制生成的 `https://shiyu.me/join/<token>` 链接，发给对方；对方打开、填邮箱昵称即可入组并自动登录。
+3. 复制生成的 `<worker 地址>/join/<token>` 链接，发给对方；对方打开、填邮箱昵称即可入组并自动登录。
 4. 「相册可见性」表格里，把要给这个朋友看的相册可见范围设成对应分组（或在相册申请通过时自动加组，见下）。
 
 如果朋友是自己在某个相册页点了「申请查看」：`/admin` 的用户表里会出现一行高亮的待处理申请，
@@ -219,22 +220,26 @@ body[data-section="dreams"] {
 
 ---
 
-## 7. 自定义域名、Cloudflare 绑定与环境变量清单
+## 7. 部署架构、Cloudflare 绑定与环境变量清单
 
-### 7.1 域名与部署架构
+### 7.1 当前部署形态：github.io 子路径 + 独立 Worker（跨源）
 
-生产环境里，Astro 静态站与 Worker 共用同一个顶级域名：域名 DNS 走 Cloudflare 代理（橙色云朵），
-Cloudflare **Worker Route** 把 `/api/*`、`/admin*`、`/join/*` 分流给 Worker，其余路径回落到
-GitHub Pages 的静态源。步骤大致是：
+**没有自定义域名**，所以用不了"同一顶级域名、Cloudflare Route 分流"那套更省心的方案（那是下面
+§7.3 的升级路径）。现在是两个完全独立的部署：
 
-1. GitHub 仓库 → Settings → Pages，Source 选 `GitHub Actions`（工作流已经在
-   `.github/workflows/deploy.yml` 里写好了，push 到 `main` 会自动跑）。
-2. 把 `public/CNAME` 里的 `shiyu.me` 换成你实际拥有的域名；同时改 `astro.config.mjs` 的 `site`。
-3. 域名 DNS 接入 Cloudflare（把 NS 记录指过去，或者用 Cloudflare Registrar），确保代理开启。
-4. `cd worker && npx wrangler deploy` 部署 Worker；然后在 Cloudflare Dashboard →
-   该域名 → Workers Routes，加：`shiyu.me/api/*`、`shiyu.me/admin*`、`shiyu.me/join/*`、`shiyu.me/write`
-   都指向这个 Worker（几条 route，或者写成一条更宽的模式，按你的 Cloudflare 套餐能力来）。
-5. 首次部署前，把 `worker/wrangler.toml` 里的占位 id 换成真实资源（本地开发不需要这步）：
+- 公开站：GitHub Pages 项目页，`https://liuroland55.github.io/Rolandweb/`。
+- Worker：Cloudflare 给的免费 `*.workers.dev` 地址，承担私密相册、友邻权限、`/admin`、`/write`。
+
+这意味着站点和 Worker 是两个不同的源，跨源请求（会话 cookie、CORS、CSRF）已经在代码里处理好了
+（`worker/src/lib/session.ts` 用 `SameSite=None; Secure`，`lib/cors.ts` / `lib/csrf.ts` 做来源校验），
+你只需要按顺序把这几步做完：
+
+1. **仓库必须是 Public。** 免费版 GitHub Pages 不支持 Private 仓库出 Pages。
+   Settings → General → Danger Zone → Change visibility → Public。
+2. **GitHub Pages**：Settings → Pages，Source 选 `GitHub Actions`
+   （`.github/workflows/deploy.yml` 已经写好，push 到 `main` 会自动构建部署）。
+3. **部署 Worker**（首次部署前，把 `worker/wrangler.toml` 里的占位 id 换成真实资源；
+   本地开发不需要这步）：
 
    ```sh
    cd worker
@@ -242,28 +247,48 @@ GitHub Pages 的静态源。步骤大致是：
    npx wrangler kv namespace create SESSIONS # 把输出的 id 填回 wrangler.toml
    npx wrangler r2 bucket create shiyu-photos
    npx wrangler d1 execute shiyu-db --remote --file=./src/db/schema.sql
+   npx wrangler secret put SIGNING_SECRET    # 生产密钥，随机字符串，见 §7.2
+   npx wrangler secret put GITHUB_TOKEN      # 创作者界面 /write 要用，见 §7.2
+   npx wrangler deploy
    ```
 
-若你不打算绑定自定义域名（只用 `<user>.github.io/<repo>` 这种子路径），需要把
-`astro.config.mjs` 的 `base` 改成 `'/<repo-name>/'`，并注意所有站内绝对路径链接
-（本仓库里都是以 `/` 开头的绝对路径，改 `base` 后需要统一加前缀，或者改用
-`import.meta.env.BASE_URL` 拼接）。这种部署下 Worker 没法和站点共享一级路径，
-`/admin`、`/join` 等需要单独一个 Worker 自己的域名/子域名，`PUBLIC_API_BASE` 也要相应指过去。
+   部署完 wrangler 会打印出 Worker 的地址，形如 `https://shiyu-worker.<你的账号>.workers.dev`。
+4. **把 Worker 地址接回站点**：仓库 Settings → Secrets and variables → Actions → Variables，
+   新建 `PUBLIC_API_BASE`，值就是上一步拿到的 Worker 地址（不要带末尾斜杠）。
+   重新触发一次部署（随便 push 一下，或去 Actions 页手动 `Run workflow`）——
+   没配这个变量之前，网站能正常浏览，只是登录/相册解锁/后台那部分会安静地保持"未登录"状态。
+5. **确认 `worker/wrangler.toml` 的 `SITE_ORIGIN`** 就是 `https://liuroland55.github.io/Rolandweb`
+   （已经预填好；改仓库名或用户名的话记得同步改这里、`astro.config.mjs` 的 `site`/`base`，
+   以及 GitHub Pages 的 URL）。
 
 ### 7.2 环境变量清单
 
-| 用途 | Astro 站（`.env`，`PUBLIC_` 前缀会打进构建产物） | Worker（`.dev.vars` 本地 / Cloudflare Secrets 生产） |
+| 用途 | Astro 站（`.env` 本地 / Actions repo Variables 生产，`PUBLIC_` 前缀会打进构建产物） | Worker（`.dev.vars` 本地 / `wrangler secret` 生产） |
 |---|---|---|
-| 前端访问 Worker 的地址 | `PUBLIC_API_BASE`（生产留空，同源；本地填 `http://127.0.0.1:8787`） | — |
+| 前端访问 Worker 的地址 | `PUBLIC_API_BASE`（**当前架构下生产环境必须设置**为 Worker 的 `*.workers.dev` 地址；本地填 `http://127.0.0.1:8787`；只有换回自定义域名+同源方案才可以留空） | — |
 | 邮件发送 | — | `RESEND_API_KEY`（不设置则退回 console 打印，本地开发够用） |
 | 邮件发件人 | — | `MAIL_FROM`（`wrangler.toml` 的 `[vars]` 里，非敏感） |
 | 签名链接密钥 | — | `SIGNING_SECRET`（必须设置，生产环境用 `wrangler secret put SIGNING_SECRET`） |
 | 创作者界面写仓库 | — | `GITHUB_TOKEN`（fine-grained token，只授予本仓库 Contents: Read and write；不设则只打印不写）；`GITHUB_REPO` / `GITHUB_BRANCH` 在 `wrangler.toml` 的 `[vars]` 里 |
-| 站点源（构造登录链接用） | — | `SITE_ORIGIN`（`wrangler.toml` 的 `[vars]` 里） |
+| 站点源（构造登录/回调/重定向链接、CORS、CSRF 校验都用它） | — | `SITE_ORIGIN`（`wrangler.toml` 的 `[vars]` 里，当前是 `https://liuroland55.github.io/Rolandweb`） |
 
-生产环境的 `RESEND_API_KEY` / `SIGNING_SECRET` 用 `wrangler secret put <NAME>` 设置
-（不要写进 `wrangler.toml`，那是明文提交进 git 的）；GitHub Actions 这边的部署工作流
-只负责构建 Astro 站，不涉及 Worker 的密钥。
+`RESEND_API_KEY` / `SIGNING_SECRET` / `GITHUB_TOKEN` 一律用 `wrangler secret put <NAME>` 设置
+（不要写进 `wrangler.toml`，那是明文提交进 git 的）；GitHub Actions 的部署工作流只负责构建 Astro 站，
+不涉及 Worker 的密钥，Worker 要单独 `wrangler deploy`（可以手动，之后想接自动化可以再加一个
+单独的 Actions workflow，跑在 `worker/` 目录、用 `cloudflare/wrangler-action`）。
+
+### 7.3 升级路径：换成自定义域名后可以怎么简化
+
+买了域名、接入 Cloudflare 之后，可以把架构换成"同一顶级域名，Cloudflare Route 分流"：域名 DNS 走
+Cloudflare 代理，Worker Route 把 `/api/*`、`/admin*`、`/join/*`、`/write` 分流给 Worker，其余路径
+回落到 GitHub Pages 静态源。这样站点和 Worker 变成同源，需要跟着改三处：
+
+1. `PUBLIC_API_BASE` 留空（同源相对路径即可）。
+2. `astro.config.mjs`：`base` 改回 `'/'`，`site` 换成新域名；加回 `public/CNAME` 写新域名——
+   站内链接不用逐个改，`withBase()` 会自动变回不加前缀。
+3. `worker/src/lib/session.ts` 的 `sameSitePolicy()` 改回固定返回 `'SameSite=Lax'`：
+   同源之后不再需要 `SameSite=None` 那套跨源让步，`Lax` 的 CSRF 防护更强，
+   `worker/src/lib/csrf.ts` 的 Origin 校验可以保留作为双保险，不冲突。
 
 ---
 

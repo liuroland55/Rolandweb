@@ -5,10 +5,14 @@
 // `GET /api/me` 发起一次 fetch。这里导出的函数只在浏览器里跑，被侧栏登录区
 // 与 /photos 权限 island 两处引用（同一份"登录状态"逻辑，不重复实现）。
 //
-// API_BASE 由构建时的 PUBLIC_API_BASE 环境变量决定：生产环境里 Cloudflare 把
-// 同一顶级域名下的 /api/* 路由给 Worker，所以默认就是站点自身源（空字符串，
-// 即同源相对路径）；本地开发 Worker 跑在独立端口时，在 .env 里把它指到
-// http://127.0.0.1:8787 即可，见 worker/.dev.vars.example 与 README。
+// API_BASE 由构建时的 PUBLIC_API_BASE 环境变量决定。当前部署在 github.io 子路径、
+// 没有自定义域名，站点和 Worker 是两个不同的源（github.io vs *.workers.dev），
+// 所以这里必须是 Worker 的完整 URL，不能留空——GitHub Actions 的构建步骤从仓库的
+// PUBLIC_API_BASE 变量读这个值（见 .github/workflows/deploy.yml），本地开发在
+// 仓库根建一个 .env 写 PUBLIC_API_BASE=http://127.0.0.1:8787。
+// 留空时（还没部署 Worker、还没配这个变量）请求会打到站点自己的源上 404，
+// fetchSession() 会静默按未登录处理，不会报错或崩页面。
+// 若未来换成自定义域名 + 同顶级域名的 Cloudflare Route 分流，这里才可以留空同源。
 const API_BASE = import.meta.env.PUBLIC_API_BASE ?? '';
 
 export interface Session {

@@ -7,6 +7,7 @@ import spectralHref from '@fontsource/spectral/files/spectral-latin-300-normal.w
 import monoHref from '@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2?url';
 import Sidebar from '../components/layout/Sidebar.astro';
 import SiteFooter from '../components/layout/SiteFooter.astro';
+import { withBase } from '../lib/site';
 
 interface Props {
   section: 'all' | 'essays' | 'poems' | 'notes' | 'music' | 'films' | 'photos' | 'now' | 'admin';
@@ -37,11 +38,11 @@ const siteTitle = title === '石予' ? title : `${title} · 石予`;
     <!-- 报头与元信息首屏必用的两个西文字体：预加载省一个往返；中文字体走 body 末尾的样式表。 -->
     <link rel="preload" as="font" type="font/woff2" crossorigin href={spectralHref} />
     <link rel="preload" as="font" type="font/woff2" crossorigin href={monoHref} />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')} />
     <meta name="generator" content={Astro.generator} />
     {description && <meta name="description" content={description} />}
-    <link rel="sitemap" href="/sitemap-index.xml" />
-    <link rel="alternate" type="application/rss+xml" title="石予 · 全站 RSS" href="/feed.xml" />
+    <link rel="sitemap" href={withBase('/sitemap-index.xml')} />
+    <link rel="alternate" type="application/rss+xml" title="石予 · 全站 RSS" href={withBase('/feed.xml')} />
     <title>{siteTitle}</title>
   </head>
   <body data-section={section}>

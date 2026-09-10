@@ -27,7 +27,7 @@ bucket_name = "shiyu-photos"
 [vars]
 # 非敏感配置。敏感值（RESEND_API_KEY 等）不要写在这里：本地开发放 .dev.vars，
 # 部署时放 GitHub Actions / Cloudflare 的 Secrets，见 README「环境变量清单」。
-SITE_ORIGIN = "https://shiyu.me"
+SITE_ORIGIN = "https://liuroland55.github.io/Rolandweb"
 MAIL_FROM = "友邻登录 <login@shiyu.me>"
 # 创作者界面 /write 往哪个仓库、哪个分支写内容文件（token 是 Secret，不在这里）
 GITHUB_REPO = "liuroland55/Rolandweb"

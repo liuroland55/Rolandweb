@@ -3,6 +3,7 @@
 import rss from '@astrojs/rss';
 import type { APIContext } from 'astro';
 import { getCollection } from 'astro:content';
+import { withBase } from '../lib/site';
 
 export async function GET(context: APIContext) {
   const [essays, poems, notes, music, films] = await Promise.all([
@@ -17,31 +18,31 @@ export async function GET(context: APIContext) {
     ...essays.map((e) => ({
       title: `文章 · ${e.data.title}`,
       pubDate: e.data.date,
-      link: `/essays/${e.id}`,
+      link: withBase(`/essays/${e.id}`),
       description: e.data.summary ?? '',
     })),
     ...poems.map((e) => ({
       title: `诗 · ${e.data.title}`,
       pubDate: e.data.date,
-      link: `/poems/${e.id}`,
+      link: withBase(`/poems/${e.id}`),
       description: e.data.version ?? '',
     })),
     ...notes.map((e) => ({
       title: `笔记 · ${e.data.title}`,
       pubDate: e.data.date,
-      link: `/notes`,
+      link: withBase('/notes'),
       description: e.body ?? '',
     })),
     ...music.map((e) => ({
       title: `乐 · ${e.data.title}`,
       pubDate: e.data.date,
-      link: `/music`,
+      link: withBase('/music'),
       description: e.body ?? '',
     })),
     ...films.map((e) => ({
       title: `影 · ${e.data.title}`,
       pubDate: e.data.date,
-      link: `/films`,
+      link: withBase('/films'),
       description: e.body ?? '',
     })),
   ].sort((a, b) => b.pubDate.getTime() - a.pubDate.getTime());
@@ -49,7 +50,7 @@ export async function GET(context: APIContext) {
   return rss({
     title: '石予 · 全站 RSS',
     description: '随笔、诗、笔记、音乐与影评的合流订阅。',
-    site: context.site ?? 'https://shiyu.me',
+    site: context.site ?? 'https://liuroland55.github.io/Rolandweb',
     items,
   });
 }

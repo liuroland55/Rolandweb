@@ -1,6 +1,7 @@
 ---
 // 全站页脚版权页。每一页都渲染，内容全部来自 counts.ts 的构建期实算。
 import { getSectionCounts, getArchiveCounts } from '../../lib/counts';
+import { withBase } from '../../lib/site';
 
 const counts = await getSectionCounts();
 const archive = await getArchiveCounts();
@@ -33,7 +34,7 @@ const years = Object.keys(archive).sort((a, b) => Number(b) - Number(a));
         {years.map((y) => (
           <li>{y} · {archive[y]}</li>
         ))}
-        <li><a href="/archive">全部年份 →</a></li>
+        <li><a href={withBase('/archive')}>全部年份 →</a></li>
       </ul>
     </div>
 
@@ -43,8 +44,8 @@ const years = Object.keys(archive).sort((a, b) => Number(b) - Number(a));
         <li><a href="mailto:hello@shiyu.me">邮箱</a></li>
         <li><a href="https://github.com/">github</a></li>
         <li><a href="https://rateyourmusic.com/">rateyourmusic</a></li>
-        <li><a class="site-footer__rss" href="/feed.xml">RSS</a></li>
-        <li><a href="/login">友邻登录 →</a></li>
+        <li><a class="site-footer__rss" href={withBase('/feed.xml')}>RSS</a></li>
+        <li><a href={withBase('/login')}>友邻登录 →</a></li>
       </ul>
     </div>
   </div>

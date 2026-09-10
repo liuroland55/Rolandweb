@@ -3,6 +3,7 @@
 import { getCollection } from 'astro:content';
 import SectionLayout from '../layouts/SectionLayout.astro';
 import { formatDate, toISODate } from '../lib/format';
+import { withBase } from '../lib/site';
 
 const [essays, poems, notes, music, films, photos] = await Promise.all([
   getCollection('essays', (e) => e.data.draft !== true),
@@ -21,12 +22,12 @@ interface Row {
 }
 
 const rows: Row[] = [
-  ...essays.map((e) => ({ date: e.data.date, genre: '文章', title: e.data.title, href: `/essays/${e.id}` })),
-  ...poems.map((e) => ({ date: e.data.date, genre: '诗', title: e.data.title, href: `/poems/${e.id}` })),
+  ...essays.map((e) => ({ date: e.data.date, genre: '文章', title: e.data.title, href: withBase(`/essays/${e.id}`) })),
+  ...poems.map((e) => ({ date: e.data.date, genre: '诗', title: e.data.title, href: withBase(`/poems/${e.id}`) })),
   ...notes.map((e) => ({ date: e.data.date, genre: '笔记', title: e.data.title })),
-  ...music.map((e) => ({ date: e.data.date, genre: '乐', title: e.data.title, href: '/music' })),
-  ...films.map((e) => ({ date: e.data.date, genre: '影', title: e.data.title, href: '/films' })),
-  ...photos.map((e) => ({ date: e.data.shot_at, genre: '照片', title: e.data.title, href: `/photos/${e.data.roll}` })),
+  ...music.map((e) => ({ date: e.data.date, genre: '乐', title: e.data.title, href: withBase('/music') })),
+  ...films.map((e) => ({ date: e.data.date, genre: '影', title: e.data.title, href: withBase('/films') })),
+  ...photos.map((e) => ({ date: e.data.shot_at, genre: '照片', title: e.data.title, href: withBase(`/photos/${e.data.roll}`) })),
 ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
 const byYear = new Map<number, Row[]>();

@@ -1,9 +1,10 @@
 ---
 import SectionLayout from '../layouts/SectionLayout.astro';
+import { withBase } from '../lib/site';
 ---
 <SectionLayout section="all" mastheadTitle="404" title="页面不存在">
   <div class="status-page">
     <p>这一页不存在，可能是链接写错了，也可能是内容还没发布。</p>
-    <p><a href="/">回到首页 →</a></p>
+    <p><a href={withBase('/')}>回到首页 →</a></p>
   </div>
 </SectionLayout>

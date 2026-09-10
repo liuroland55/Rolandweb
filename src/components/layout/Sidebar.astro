@@ -3,6 +3,7 @@
 // 收起态记忆在 localStorage（键 rail:collapsed），由 BaseLayout <head> 里的内联脚本提前应用，
 // 避免刷新闪烁；本组件只负责渲染 + 挂载「切换收起」与「拉取登录会话」两个最小 island。
 import { getSectionCounts } from '../../lib/counts';
+import { withBase } from '../../lib/site';
 
 interface Props {
   current?: 'all' | 'essays' | 'poems' | 'notes' | 'music' | 'films' | 'photos';
@@ -12,19 +13,19 @@ const { current }: Props = Astro.props;
 const counts = await getSectionCounts();
 
 const navItems = [
-  { key: 'all', name: '全部', href: '/', count: counts.total },
-  { key: 'essays', name: '文章', href: '/essays', count: counts.essays },
-  { key: 'poems', name: '诗', href: '/poems', count: counts.poems },
-  { key: 'notes', name: '笔记', href: '/notes', count: counts.notes },
-  { key: 'music', name: '乐', href: '/music', count: counts.music },
-  { key: 'films', name: '影', href: '/films', count: counts.films },
-  { key: 'photos', name: '照片', href: '/photos', count: counts.photosRolls },
+  { key: 'all', name: '全部', href: withBase('/'), count: counts.total },
+  { key: 'essays', name: '文章', href: withBase('/essays'), count: counts.essays },
+  { key: 'poems', name: '诗', href: withBase('/poems'), count: counts.poems },
+  { key: 'notes', name: '笔记', href: withBase('/notes'), count: counts.notes },
+  { key: 'music', name: '乐', href: withBase('/music'), count: counts.music },
+  { key: 'films', name: '影', href: withBase('/films'), count: counts.films },
+  { key: 'photos', name: '照片', href: withBase('/photos'), count: counts.photosRolls },
 ] as const;
 ---
 <nav class="rail" aria-label="站内索引">
   <div class="rail__expanded">
     <div class="rail__top">
-      <a class="rail__sitename" href="/">石予</a>
+      <a class="rail__sitename" href={withBase("/")}>石予</a>
       <button type="button" class="rail__toggle" data-rail-toggle aria-label="收起侧栏">‹</button>
     </div>
     <div class="rail__rule"></div>
@@ -40,12 +41,12 @@ const navItems = [
       ))}
     </ul>
     <div class="rail__rule"></div>
-    <a class="rail__now" href="/now">
+    <a class="rail__now" href={withBase("/now")}>
       <span class="rail__now-label">Now <em>瀑布流</em></span>
       <span class="rail__now-badge">{counts.nowNewToday} 新</span>
     </a>
     <div class="rail__login" data-login-slot>
-      <a href="/login">友邻登录 →</a>
+      <a href={withBase("/login")}>友邻登录 →</a>
     </div>
   </div>
 
@@ -72,12 +73,12 @@ const navItems = [
       </li>
     ))}
   </ul>
-  <a class="rail__now" href="/now">
+  <a class="rail__now" href={withBase("/now")}>
     <span class="rail__now-label">Now <em>瀑布流</em></span>
     <span class="rail__now-badge">{counts.nowNewToday} 新</span>
   </a>
   <div class="rail__login" data-login-slot>
-    <a href="/login">友邻登录 →</a>
+    <a href={withBase("/login")}>友邻登录 →</a>
   </div>
 </details>
 

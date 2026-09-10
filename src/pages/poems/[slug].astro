@@ -1,6 +1,7 @@
 ---
 import { getCollection, render } from 'astro:content';
 import EntryLayout from '../../layouts/EntryLayout.astro';
+import { withBase } from '../../lib/site';
 
 export async function getStaticPaths() {
   const entries = (await getCollection('poems', (e) => e.data.draft !== true)).sort(
@@ -10,8 +11,8 @@ export async function getStaticPaths() {
     params: { slug: entry.id },
     props: {
       entry,
-      prev: entries[i + 1] && { title: entries[i + 1].data.title, href: `/poems/${entries[i + 1].id}` },
-      next: entries[i - 1] && { title: entries[i - 1].data.title, href: `/poems/${entries[i - 1].id}` },
+      prev: entries[i + 1] && { title: entries[i + 1].data.title, href: withBase(`/poems/${entries[i + 1].id}`) },
+      next: entries[i - 1] && { title: entries[i - 1].data.title, href: withBase(`/poems/${entries[i - 1].id}`) },
     },
   }));
 }

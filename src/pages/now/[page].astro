@@ -5,6 +5,7 @@
 import SectionLayout from '../../layouts/SectionLayout.astro';
 import NowCard from '../../components/content/NowCard.astro';
 import { getSortedNowEntries, NOW_PAGE_SIZE } from '../../lib/now';
+import { withBase } from '../../lib/site';
 
 export async function getStaticPaths() {
   const entries = await getSortedNowEntries();
@@ -39,7 +40,7 @@ const hasMore = page < totalPages;
   </div>
 
   <nav class="now-pager" data-now-pager>
-    <a href={page - 1 === 1 ? '/now' : `/now/${page - 1}`}>← 上一页</a>
-    {hasMore && <a href={`/now/${page + 1}`} data-now-next>继续加载 →</a>}
+    <a href={withBase(page - 1 === 1 ? '/now' : `/now/${page - 1}`)}>← 上一页</a>
+    {hasMore && <a href={withBase(`/now/${page + 1}`)} data-now-next>继续加载 →</a>}
   </nav>
 </SectionLayout>

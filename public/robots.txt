@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /admin
 
-Sitemap: https://shiyu.me/sitemap-index.xml
+Sitemap: https://liuroland55.github.io/Rolandweb/sitemap-index.xml

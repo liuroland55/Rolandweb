@@ -2,6 +2,7 @@
 import { getCollection } from 'astro:content';
 import SectionLayout from '../../layouts/SectionLayout.astro';
 import EntryListRow from '../../components/content/EntryListRow.astro';
+import { withBase } from '../../lib/site';
 
 const entries = (await getCollection('poems', (e) => e.data.draft !== true)).sort(
   (a, b) => b.data.date.getTime() - a.data.date.getTime(),
@@ -17,7 +18,7 @@ const entries = (await getCollection('poems', (e) => e.data.draft !== true)).sor
   <div class="entry-list">
     {entries.map((entry) => (
       <EntryListRow
-        href={`/poems/${entry.id}`}
+        href={withBase(`/poems/${entry.id}`)}
         date={entry.data.date}
         genre={entry.data.version ?? '定稿'}
         title={entry.data.title}

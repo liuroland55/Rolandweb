@@ -25,6 +25,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # Worker 部署到 *.workers.dev 后，在仓库 Settings → Secrets and variables →
+          # Actions → Variables 里加一个同名的 PUBLIC_API_BASE，值填 Worker 的完整 URL
+          # （不要带末尾斜杠）。不设置就是空字符串，站点仍能正常浏览，只是登录/相册/后台
+          # 那部分会安静地保持"未登录"的默认状态（见 src/lib/auth.ts 的降级处理）。
+          PUBLIC_API_BASE: ${{ vars.PUBLIC_API_BASE }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist

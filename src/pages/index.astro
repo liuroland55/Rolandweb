@@ -5,6 +5,7 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Masthead from '../components/layout/Masthead.astro';
 import { formatDate, readingTime, toISODate, wordCount } from '../lib/format';
+import { withBase } from '../lib/site';
 
 function firstLines(body: string, n: number): string {
   return body
@@ -50,7 +51,7 @@ const latestNotes = byDateDesc(notes).slice(0, 2);
     <section class="hero">
       <div class="hero__main">
         <div class="hero__tag">随笔 · <time datetime={toISODate(heroEssay.data.date)}>{formatDate(heroEssay.data.date, { withYear: false })}</time></div>
-        <h2 class="hero__title"><a href={`/essays/${heroEssay.id}`}>{heroEssay.data.title}</a></h2>
+        <h2 class="hero__title"><a href={withBase(`/essays/${heroEssay.id}`)}>{heroEssay.data.title}</a></h2>
         {heroEssay.data.summary && <p class="hero__summary">{heroEssay.data.summary}</p>}
       </div>
       <div class="hero__meta">
@@ -66,14 +67,14 @@ const latestNotes = byDateDesc(notes).slice(0, 2);
     {latestPoem && (
       <div class="home-poem">
         <div class="home-poem__tag">诗 · {latestPoem.data.version ?? '定稿'}</div>
-        <h3 class="home-poem__title"><a href={`/poems/${latestPoem.id}`}>{latestPoem.data.title}</a></h3>
+        <h3 class="home-poem__title"><a href={withBase(`/poems/${latestPoem.id}`)}>{latestPoem.data.title}</a></h3>
         <p class="home-poem__lines">{poemPreview}</p>
       </div>
     )}
     {latestMusic && (
       <div class="home-listening">
         <div class="home-listening__tag">乐 · <time datetime={toISODate(latestMusic.data.date)}>{formatDate(latestMusic.data.date, { withYear: false })}</time></div>
-        <h3 class="home-listening__title"><a href="/music">{latestMusic.data.title}</a></h3>
+        <h3 class="home-listening__title"><a href={withBase('/music')}>{latestMusic.data.title}</a></h3>
         <ul class="home-listening__list">
           {latestMusic.data.items!.slice(0, 4).map((item) => (
             <li>
@@ -88,14 +89,14 @@ const latestNotes = byDateDesc(notes).slice(0, 2);
 
   {latestRoll && (
     <section class="home-photos">
-      <div class="home-photos__title">照片 · <a href="/photos">全部相册 →</a></div>
+      <div class="home-photos__title">照片 · <a href={withBase('/photos')}>全部相册 →</a></div>
       <div class="home-photos__grid">
         {rollTiles.map((_, i) => (
           <div class="placeholder home-photos__tile">
             <span class="placeholder__caption">#{i + 1}</span>
           </div>
         ))}
-        <a class="home-photos__more" href={`/photos/${latestRoll.data.roll}`}>+{rollExtra} 整卷</a>
+        <a class="home-photos__more" href={withBase(`/photos/${latestRoll.data.roll}`)}>+{rollExtra} 整卷</a>
       </div>
     </section>
   )}

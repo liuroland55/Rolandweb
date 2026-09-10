@@ -2,6 +2,7 @@
 import { getCollection, render } from 'astro:content';
 import SectionLayout from '../../layouts/SectionLayout.astro';
 import { formatDate, toISODate } from '../../lib/format';
+import { withBase } from '../../lib/site';
 
 const [notes, essays] = await Promise.all([
   getCollection('notes', (e) => e.data.draft !== true),
@@ -31,7 +32,7 @@ const unpromotedCount = sorted.filter((n) => !n.data.promote_to).length;
           <Content />
         </div>
         {note.data.promote_to && essayTitleById.has(note.data.promote_to) && (
-          <a class="note-card__promoted" href={`/essays/${note.data.promote_to}`}>
+          <a class="note-card__promoted" href={withBase(`/essays/${note.data.promote_to}`)}>
             已升级为《{essayTitleById.get(note.data.promote_to)}》→
           </a>
         )}

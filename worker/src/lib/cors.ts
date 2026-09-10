@@ -1,14 +1,20 @@
-// 生产环境里 Astro 站和 Worker 走同一个顶级域名（Cloudflare Route 分流，见 CLAUDE.md），
-// 本来不需要 CORS。这里只是为了本地开发方便：Astro dev server 和 wrangler dev 是两个端口，
-// 严格匹配允许的来源，不做成通配符。
+// 站点部署在 github.io 子路径（没有自定义域名可绑），Worker 只能在 *.workers.dev 上，
+// 两者是真正跨源的关系，这里的 CORS 不是可选项。
+// SITE_ORIGIN 这个环境变量本身带路径（"https://liuroland55.github.io/Rolandweb"，
+// 构造重定向 URL 时要用完整形式），但浏览器发来的 Origin 请求头永远只有 scheme+host+port、
+// 不带路径——直接用 === 比较必然失败，所以要先用 new URL().origin 把路径去掉。
 import type { Env } from '../env';
 
 const DEV_ORIGINS = ['http://localhost:4321', 'http://127.0.0.1:4321'];
 
+export function siteOrigin(env: Env): string {
+  return new URL(env.SITE_ORIGIN).origin;
+}
+
 export function corsHeaders(request: Request, env: Env): HeadersInit {
   const origin = request.headers.get('Origin');
   if (!origin) return {};
-  const allowed = origin === env.SITE_ORIGIN || DEV_ORIGINS.includes(origin);
+  const allowed = origin === siteOrigin(env) || DEV_ORIGINS.includes(origin);
   if (!allowed) return {};
   return {
     'Access-Control-Allow-Origin': origin,

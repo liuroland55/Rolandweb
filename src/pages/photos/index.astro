@@ -5,6 +5,7 @@
 import { getCollection } from 'astro:content';
 import SectionLayout from '../../layouts/SectionLayout.astro';
 import { formatDate, toISODate } from '../../lib/format';
+import { withBase } from '../../lib/site';
 
 const rolls = (await getCollection('photos', (e) => e.data.draft !== true && e.data.visibility !== 'private')).sort(
   (a, b) => b.data.shot_at.getTime() - a.data.shot_at.getTime(),
@@ -28,7 +29,7 @@ const rolls = (await getCollection('photos', (e) => e.data.draft !== true && e.d
           </div>
           <div class="roll-card__body">
             <div class="roll-card__title-row">
-              <a class="roll-card__title" href={`/photos/${roll.data.roll}`}>{roll.data.title}</a>
+              <a class="roll-card__title" href={withBase(`/photos/${roll.data.roll}`)}>{roll.data.title}</a>
               <span
                 class:list={['roll-card__badge', isPublic ? 'roll-card__badge--public' : 'roll-card__badge--locked']}
                 data-roll-badge
@@ -41,7 +42,7 @@ const rolls = (await getCollection('photos', (e) => e.data.draft !== true && e.d
               {isPublic ? `${roll.data.count} 张 · 打包下载 ${roll.data.download?.size ?? ''}` : `${roll.data.count} 张 · 仅「${groupLabel}」可见`}
             </div>
             {!isPublic && (
-              <a class="roll-card__request" href={`/photos/${roll.data.roll}#request-access`} data-roll-request>申请查看 →</a>
+              <a class="roll-card__request" href={withBase(`/photos/${roll.data.roll}#request-access`)} data-roll-request>申请查看 →</a>
             )}
           </div>
         </article>

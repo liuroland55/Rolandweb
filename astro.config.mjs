@@ -3,12 +3,13 @@ import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 
-// 部署到自定义域名时：把 site 换成实际域名（如 https://example.com）。
-// 若部署到 GitHub Pages 的仓库子路径（即未绑定自定义域名），需同时把 base 改为 '/<repo-name>/'，
-// 并保证站内所有内部链接都使用 Astro 提供的 base-aware 方式（相对路径或 import.meta.env.BASE_URL）。
+// 当前部署在 GitHub Pages 的仓库子路径（没有自定义域名）：base 必须是仓库名，
+// 且仓库必须是 Public（免费版 Pages 不支持 Private 仓库）。
+// 换回自定义域名时：site 改成真实域名、base 改回 '/'，加回 public/CNAME——
+// 站内链接不用动，因为它们都走 src/lib/site.ts 的 withBase()，会自动变回不加前缀。
 export default defineConfig({
-  site: 'https://shiyu.me',
-  base: '/',
+  site: 'https://liuroland55.github.io/Rolandweb',
+  base: '/Rolandweb',
   output: 'static',
   vite: {
     build: {

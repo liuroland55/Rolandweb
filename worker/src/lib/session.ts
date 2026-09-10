@@ -34,20 +34,25 @@ export async function destroySession(env: Env, request: Request): Promise<void> 
   await env.SESSIONS.delete(`session:${token}`);
 }
 
+// 站点（github.io 子路径）和 Worker（*.workers.dev）没有自定义域名可绑，是两个不同的源，
+// 侧栏/相册页那些 fetch(apiUrl(...), {credentials:'include'}) 是跨源请求。
+// SameSite=Lax 的 cookie 不会附加在跨源 fetch 上（只有顶层导航才会带），所以这里必须用
+// SameSite=None——而 None 要求浏览器同时看到 Secure，否则整条 cookie 会被静默丢弃。
+// 代价是弱化了一部分 CSRF 防护，用 lib/csrf.ts 的 Origin 校验补回来（见 index.ts 里的调用）。
+// 本地 http 开发时 secure=false：不可能同时满足 None+无 Secure，所以退回 Lax——
+// 这意味着本地起两个端口测"跨域会话"这件事在真实浏览器里测不出来，只能跑到线上（或用 curl）验证。
+function sameSitePolicy(secure: boolean): string {
+  return secure ? 'SameSite=None' : 'SameSite=Lax';
+}
+
 export function sessionCookieHeader(token: string, secure: boolean): string {
-  const parts = [
-    `${COOKIE_NAME}=${token}`,
-    'Path=/',
-    'HttpOnly',
-    'SameSite=Lax',
-    `Max-Age=${SESSION_TTL_SECONDS}`,
-  ];
+  const parts = [`${COOKIE_NAME}=${token}`, 'Path=/', 'HttpOnly', sameSitePolicy(secure), `Max-Age=${SESSION_TTL_SECONDS}`];
   if (secure) parts.push('Secure');
   return parts.join('; ');
 }
 
 export function clearSessionCookieHeader(secure: boolean): string {
-  const parts = [`${COOKIE_NAME}=`, 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Max-Age=0'];
+  const parts = [`${COOKIE_NAME}=`, 'Path=/', 'HttpOnly', sameSitePolicy(secure), 'Max-Age=0'];
   if (secure) parts.push('Secure');
   return parts.join('; ');
 }

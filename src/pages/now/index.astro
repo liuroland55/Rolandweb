@@ -2,6 +2,7 @@
 import SectionLayout from '../../layouts/SectionLayout.astro';
 import NowCard from '../../components/content/NowCard.astro';
 import { getSortedNowEntries, isToday, NOW_PAGE_SIZE } from '../../lib/now';
+import { withBase } from '../../lib/site';
 
 const allEntries = await getSortedNowEntries();
 const todayCount = allEntries.filter((e) => isToday(e.data.date)).length;
@@ -40,7 +41,7 @@ const pinnedDaysAgo = Math.max(0, Math.floor((Date.now() - pinnedUpdated.getTime
       ))}
     </div>
 
-    <div class="now-waterfall" data-now-waterfall data-next-page="/now/2">
+    <div class="now-waterfall" data-now-waterfall>
       {pageEntries.map((entry) => (
         <NowCard entry={entry} />
       ))}
@@ -49,7 +50,7 @@ const pinnedDaysAgo = Math.max(0, Math.floor((Date.now() - pinnedUpdated.getTime
 
   {hasMore && (
     <nav class="now-pager" data-now-pager>
-      <a href="/now/2" data-now-next>继续加载 · 还有 {allEntries.length - NOW_PAGE_SIZE} 条 →</a>
+      <a href={withBase('/now/2')} data-now-next>继续加载 · 还有 {allEntries.length - NOW_PAGE_SIZE} 条 →</a>
     </nav>
   )}
 </SectionLayout>
