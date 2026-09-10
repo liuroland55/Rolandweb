@@ -14,11 +14,11 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "shiyu-db"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "5e451068-9181-4309-8253-c1455d1ecf97"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "00000000000000000000000000000000"
+id = "0815e82f651e4dc88be5fd69fcc513e7"
 
 [[r2_buckets]]
 binding = "PHOTOS"

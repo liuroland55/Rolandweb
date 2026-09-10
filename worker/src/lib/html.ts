@@ -43,7 +43,19 @@ export function renderPage(title: string, bodyHtml: string, opts: { admin?: bool
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex" />
 <title>${escapeHtml(title)}</title>
-<style>${BASE_STYLE}${opts.admin ? 'body{background:#0e0f0d;color:#ECEEE8;} .panel{background:#131412;} input,textarea{background:#171815;color:#ECEEE8;border-color:rgba(236,238,232,.22);} th,td{border-color:rgba(236,238,232,.14);}' : ''}</style>
+<style>${BASE_STYLE}${
+    opts.admin
+      ? // 深色主题不能只换背景色：--ink-meta/--rule 这两个变量本来是给浅色纸准备的深色值，
+        // 标签文字、表头、统计数字下面那行小字、普通链接全都读这两个变量，
+        // 不重新定义的话在黑底上要么看不清、要么直接看不见。
+        `:root{--ink-meta:rgba(236,238,232,.68);--rule:rgba(236,238,232,.14);}
+body{background:#0e0f0d;color:#ECEEE8;}
+a{color:var(--accent-bright);}
+.panel{background:#131412;}
+input,textarea{background:#171815;color:#ECEEE8;border-color:rgba(236,238,232,.22);}
+th,td{border-color:rgba(236,238,232,.14);}`
+      : ''
+  }</style>
 </head>
 <body>
 <div class="shell">${bodyHtml}</div>
