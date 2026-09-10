@@ -11,6 +11,16 @@ export function siteOrigin(env: Env): string {
   return new URL(env.SITE_ORIGIN).origin;
 }
 
+/**
+ * Worker 自己的源（比如 https://shiyu-worker.xxx.workers.dev）。
+ * `/api/callback`、`/admin`、`/join/:token`、`/write` 都只存在于这个源上，不在 SITE_ORIGIN 里——
+ * 构造指向这些路径的绝对 URL（登录链接、admin 写操作后的重定向）必须用这个，
+ * 用错成 siteOrigin/SITE_ORIGIN 会拼出一个静态站上根本不存在的死链接。
+ */
+export function workerOrigin(request: Request): string {
+  return new URL(request.url).origin;
+}
+
 export function corsHeaders(request: Request, env: Env): HeadersInit {
   const origin = request.headers.get('Origin');
   if (!origin) return {};

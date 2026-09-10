@@ -3,6 +3,7 @@ import { json, readBody } from '../lib/http';
 import { randomToken } from '../lib/crypto';
 import { createMailer, magicLinkEmail } from '../lib/mail';
 import { checkLoginRateLimit } from '../lib/rateLimit';
+import { workerOrigin } from '../lib/cors';
 
 export async function handleLogin(request: Request, env: Env): Promise<Response> {
   const body = await readBody(request);
@@ -18,7 +19,8 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
       await env.DB.prepare('INSERT INTO magic_links (token, email, expires_at) VALUES (?, ?, ?)')
         .bind(token, email, expiresAt)
         .run();
-      const loginUrl = `${env.SITE_ORIGIN}/api/callback?token=${token}`;
+      // /api/callback 只存在于 Worker 自己的源上，不是站点的域名——用错会拼出死链接。
+      const loginUrl = `${workerOrigin(request)}/api/callback?token=${token}`;
       const mailer = createMailer(env);
       const { subject, html } = magicLinkEmail(loginUrl);
       await mailer.send(email, subject, html);

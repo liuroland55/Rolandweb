@@ -7,6 +7,7 @@ import { getUserById, type UserRow } from '../lib/db';
 import { renderPage, escapeHtml } from '../lib/html';
 import { readBody } from '../lib/http';
 import { randomId, randomToken } from '../lib/crypto';
+import { workerOrigin } from '../lib/cors';
 
 async function requireAdmin(request: Request, env: Env): Promise<UserRow | null> {
   const session = await readSession(env, request);
@@ -23,7 +24,7 @@ export async function handleAdmin(request: Request, env: Env, url: URL): Promise
   const path = url.pathname;
   const method = request.method;
 
-  if (path === '/admin' && method === 'GET') return renderDashboard(env, '');
+  if (path === '/admin' && method === 'GET') return renderDashboard(request, env, '');
 
   if (path === '/admin/invites' && method === 'POST') return createInvite(request, env);
   if (path.startsWith('/admin/invites/') && path.endsWith('/revoke') && method === 'POST') {
@@ -31,17 +32,17 @@ export async function handleAdmin(request: Request, env: Env, url: URL): Promise
     await env.DB.prepare('UPDATE invites SET revoked_at = ? WHERE token = ?')
       .bind(new Date().toISOString(), token)
       .run();
-    return Response.redirect(`${env.SITE_ORIGIN}/admin`, 303);
+    return Response.redirect(`${workerOrigin(request)}/admin`, 303);
   }
 
   if (path.startsWith('/admin/requests/') && path.endsWith('/approve') && method === 'POST') {
     const id = path.slice('/admin/requests/'.length, -'/approve'.length);
-    return approveRequest(env, id);
+    return approveRequest(request, env, id);
   }
   if (path.startsWith('/admin/requests/') && path.endsWith('/reject') && method === 'POST') {
     const id = path.slice('/admin/requests/'.length, -'/reject'.length);
     await env.DB.prepare("UPDATE requests SET status = 'rejected' WHERE id = ?").bind(id).run();
-    return Response.redirect(`${env.SITE_ORIGIN}/admin`, 303);
+    return Response.redirect(`${workerOrigin(request)}/admin`, 303);
   }
 
   if (path.startsWith('/admin/albums/') && path.endsWith('/visibility') && method === 'POST') {
@@ -54,13 +55,14 @@ export async function handleAdmin(request: Request, env: Env, url: URL): Promise
   return new Response('Not Found', { status: 404 });
 }
 
-async function approveRequest(env: Env, id: string): Promise<Response> {
+async function approveRequest(request: Request, env: Env, id: string): Promise<Response> {
+  const backToAdmin = `${workerOrigin(request)}/admin`;
   const reqRow = await env.DB.prepare('SELECT * FROM requests WHERE id = ?').bind(id).first<{
     id: string;
     roll: string;
     email: string;
   }>();
-  if (!reqRow) return Response.redirect(`${env.SITE_ORIGIN}/admin`, 303);
+  if (!reqRow) return Response.redirect(backToAdmin, 303);
 
   let user = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(reqRow.email).first<UserRow>();
   if (!user) {
@@ -70,7 +72,7 @@ async function approveRequest(env: Env, id: string): Promise<Response> {
       .run();
     user = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id2).first<UserRow>();
   }
-  if (!user) return Response.redirect(`${env.SITE_ORIGIN}/admin`, 303);
+  if (!user) return Response.redirect(backToAdmin, 303);
 
   const { results: groupRows } = await env.DB.prepare('SELECT group_id FROM album_groups WHERE roll = ?')
     .bind(reqRow.roll)
@@ -82,7 +84,7 @@ async function approveRequest(env: Env, id: string): Promise<Response> {
   }
   await env.DB.prepare("UPDATE requests SET status = 'approved' WHERE id = ?").bind(id).run();
 
-  return Response.redirect(`${env.SITE_ORIGIN}/admin`, 303);
+  return Response.redirect(backToAdmin, 303);
 }
 
 async function createInvite(request: Request, env: Env): Promise<Response> {
@@ -93,7 +95,7 @@ async function createInvite(request: Request, env: Env): Promise<Response> {
   const groupId = body.group_id;
   const days = Number(body.days || '30');
   const maxUses = Number(body.max_uses || '1');
-  if (!groupId) return renderDashboard(env, '生成邀请链接需要选一个分组。');
+  if (!groupId) return renderDashboard(request, env, '生成邀请链接需要选一个分组。');
 
   const token = randomToken(16);
   const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
@@ -103,14 +105,14 @@ async function createInvite(request: Request, env: Env): Promise<Response> {
     .bind(token, groupId, expiresAt, maxUses, admin.id)
     .run();
 
-  return Response.redirect(`${env.SITE_ORIGIN}/admin`, 303);
+  return Response.redirect(`${workerOrigin(request)}/admin`, 303);
 }
 
 async function updateAlbumVisibility(request: Request, env: Env, roll: string): Promise<Response> {
   const body = await readBody(request);
   const visibility = body.visibility;
   if (visibility !== 'public' && visibility !== 'group' && visibility !== 'private') {
-    return renderDashboard(env, '无效的可见范围。');
+    return renderDashboard(request, env, '无效的可见范围。');
   }
   await env.DB.prepare('UPDATE albums SET visibility = ? WHERE roll = ?').bind(visibility, roll).run();
 
@@ -118,7 +120,7 @@ async function updateAlbumVisibility(request: Request, env: Env, roll: string): 
     await env.DB.prepare('DELETE FROM album_groups WHERE roll = ?').bind(roll).run();
     await env.DB.prepare('INSERT INTO album_groups (roll, group_id) VALUES (?, ?)').bind(roll, body.group_id).run();
   }
-  return Response.redirect(`${env.SITE_ORIGIN}/admin`, 303);
+  return Response.redirect(`${workerOrigin(request)}/admin`, 303);
 }
 
 async function exportUsersCsv(env: Env): Promise<Response> {
@@ -133,7 +135,7 @@ async function exportUsersCsv(env: Env): Promise<Response> {
   });
 }
 
-async function renderDashboard(env: Env, error: string): Promise<Response> {
+async function renderDashboard(request: Request, env: Env, error: string): Promise<Response> {
   const [{ results: groups }, { results: users }, { results: pendingRequests }, { results: invites }, { results: albums }] =
     await Promise.all([
       env.DB.prepare('SELECT * FROM groups ORDER BY name').all<{ id: string; name: string }>(),
@@ -216,7 +218,8 @@ async function renderDashboard(env: Env, error: string): Promise<Response> {
 
   const inviteCards = invites
     .map((inv) => {
-      const joinUrl = `${env.SITE_ORIGIN}/join/${inv.token}`;
+      // /join/:token 是 Worker 自己的路由，不在站点域名上。
+      const joinUrl = `${workerOrigin(request)}/join/${inv.token}`;
       return `<div class="panel" style="background:var(--paper-panel);color:var(--ink);border:1px solid var(--rule)">
         <div style="word-break:break-all;font-family:var(--mono);font-size:11px">${escapeHtml(joinUrl)}</div>
         <div style="margin-top:6px;font-family:var(--mono);font-size:10.5px;opacity:.7">
