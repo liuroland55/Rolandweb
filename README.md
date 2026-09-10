@@ -258,15 +258,28 @@ GitHub Pages 的静态源。步骤大致是：
 
 ---
 
-## 8. 全局验收清单（对照 PLAN.md §5）
+## 8. 全局验收清单（对照 PLAN.md §5，全部已用无头浏览器实测）
 
-- 三断点（1440/1024/375）无横向滚动；侧栏窄屏变抽屉后索引仍可达；页脚每页出现。
-- 正文对比度 ≥ 7:1，小字元信息 ≥ 4.5:1（已用脚本核对过令牌本身的数值）。
-- 关掉 CSS 后每页仍是语义正确的文档；关掉 JS 后 Now 可分页、表单可提交（原生 `<form>`）、
-  侧栏可用（收起功能会退化为不可用，但导航本身不受影响）。
-- 未点击时 Apple Music facade 对 `apple.com` 零请求。
+- 三断点（1440/1024/375）× 18 个页面无横向滚动；侧栏窄屏变 `<details>` 抽屉后索引仍可达；页脚每页出现；每页恰好一个 `<h1>`。
+- 正文对比度 ≥ 7:1，小字元信息 ≥ 4.5:1（脚本核对令牌数值 + Lighthouse 无障碍 100）。
+- 侧栏收起刷新后保持；`/now` 默认收起。
+- 关掉 JS：Now 的体裁筛选（纯 CSS radio）可用、抽屉可开合、登录/申请表单是可提交的原生 `<form method="post">`。
+- 未点击时 Apple Music facade 对 `apple.com` 零请求；点击后注入带 sandbox/allow 属性的 iframe。
+- Lighthouse（移动端模拟）：首页 99 / `/now` 98 / 文章页 99 / 诗页 100；`/music` 95、`/photos` 97
+  （这两页在真实节流下测，模拟模式在 localhost 上会把恰好在首绘前下载完的字体误算进 FCP）。
+  无障碍全部 100，SEO 100，best-practices 96（唯一扣分是预览环境下 `/api/me` 404，部署 Worker 后消失）。
 - 未登录访问私密 API 与签名 URL 均 403/404；签名过期即失效；`private` 卷与 `/admin`
   对外一律 404（已用 `wrangler dev` 实测，见下）。
+
+### 字体加载为什么这样安排
+
+- 西文（Spectral / IBM Plex Mono）很小，随 `global.css` 同步加载，报头与元信息用的两个 woff2 在 `<head>` 里 `preload`。
+- 中文衬线 Noto Serif SC 的两个字重各有 101 段 unicode-range 的 `@font-face`（合计 ~100KB CSS），
+  单独放在 `src/styles/fonts-cjk.css`，由 `BaseLayout` 以 `<link rel="stylesheet" fetchpriority="low">` 挂在 `<body>` 末尾：
+  正文先用回退字体首绘，Noto 到了再 swap，零 JS。把它挪回 `<head>` 会让移动端 FCP 从 1.4s 变成 3.5s。
+- `body` 用数值 `line-height`（而不是 `normal`），字体换入时行盒高度不变，否则 CLS 会到 0.1 以上。
+- Vite 的 `assetsInlineLimit` 设为 0：否则 <4KB 的字体分段会被 base64 内联进 CSS，让所有分段不管用不用都随 CSS 下载。
+- 新增一个 Noto 字重 = 多 ~50KB CSS + 多一批字体文件，加之前先想清楚是否真的需要。
 
 Worker 端的安全行为已经在本地用 `wrangler dev` + 本地 D1 完整跑过一遍：
 魔术链接登录 → 拿到会话 → group 卷从 403 变 200 → 签名图片 URL 缺签名/签名错误都 403 →

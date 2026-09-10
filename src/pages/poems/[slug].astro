@@ -24,6 +24,7 @@ const { Content } = await render(entry);
   mastheadTitle="诗"
   mastheadMeta={entry.data.title}
   title={entry.data.title}
+  description={`《${entry.data.title}》· ${entry.data.version ?? '定稿'}：${(entry.body ?? '').split('\n').find((l) => l.trim()) ?? ''}`}
   date={entry.data.date}
   metaLines={[entry.data.version ?? '定稿']}
   notes={entry.data.notes}

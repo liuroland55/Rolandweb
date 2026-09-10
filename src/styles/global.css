@@ -4,18 +4,16 @@
   新增栏目时只允许新增一组 [data-section="x"] 变量覆盖，见 CLAUDE.md「如何加一个新栏目」。
 */
 
+/*
+  字重只引入真正用到的：全站只有 300（正文/报头）、400（标题）、600（头像首字母，等宽）。
+  中文衬线 Noto Serif SC 不在这里：它在 src/styles/fonts-cjk.css，由 BaseLayout 放到
+  <body> 末尾异步生效（原因见那个文件的注释）。
+*/
 @import '@fontsource/spectral/300.css';
 @import '@fontsource/spectral/400.css';
-@import '@fontsource/spectral/500.css';
-@import '@fontsource/spectral/600.css';
 @import '@fontsource/spectral/300-italic.css';
 @import '@fontsource/spectral/400-italic.css';
-@import '@fontsource/noto-serif-sc/300.css';
-@import '@fontsource/noto-serif-sc/400.css';
-@import '@fontsource/noto-serif-sc/500.css';
-@import '@fontsource/noto-serif-sc/600.css';
 @import '@fontsource/ibm-plex-mono/400.css';
-@import '@fontsource/ibm-plex-mono/500.css';
 @import '@fontsource/ibm-plex-mono/600.css';
 
 /* ========== 1.1 令牌 ========== */
@@ -75,14 +73,20 @@ body[data-section="admin"] {
   --accent-bright: oklch(.72 .1 152);
 }
 
+/*
+  金属感竖条纹覆盖层。用一张 5×1 的 SVG 平铺，而不是 repeating-linear-gradient：
+  整页 1px 周期的重复渐变光栅化极贵（Lighthouse 里 Rendering 占了半秒），平铺位图几乎免费。
+  position: absolute 贴着 body（body 是 relative）随文档滚动，视觉与 fixed 一致但不用单独合成层。
+*/
 body[data-section="music"]::before,
 body[data-section="admin"]::before {
   content: "";
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: repeating-linear-gradient(90deg, rgba(236, 238, 232, .13) 0 1px, transparent 1px 5px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='5' height='1'%3E%3Crect width='1' height='1' fill='%23ECEEE8' fill-opacity='.13'/%3E%3C/svg%3E");
+  background-repeat: repeat;
 }
 
 @keyframes sheen {
@@ -91,13 +95,18 @@ body[data-section="admin"]::before {
 }
 
 body[data-section="music"] .section-title,
-body[data-section="admin"] .section-title {
+body[data-section="music"] .masthead__title,
+body[data-section="admin"] .section-title,
+body[data-section="admin"] .masthead__title {
   background-image: linear-gradient(100deg, var(--ink) 42%, var(--accent-bright) 50%, var(--ink) 58%);
   background-size: 250% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: sheen 9s linear infinite;
+  /* background-position 动画每帧都要重绘：用 steps 降到 10fps（9s 的慢扫光看不出差别），
+     并用 will-change 把标题单独提成合成层，重绘范围只限于标题自己。 */
+  animation: sheen 9s steps(90) infinite;
+  will-change: transform;
 }
 
 /* films：白纸 + 暖褐 */
@@ -120,6 +129,8 @@ body {
   color: var(--ink);
   font-family: var(--serif-cjk);
   font-weight: 300;
+  /* 数值行高，全站继承：line-height: normal 会随字体而变，Noto 换入时会让所有行盒长高，产生 CLS。 */
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -141,6 +152,7 @@ h1, h2, h3, h4, p, ul, ol, dl, figure { margin: 0; }
   font-family: var(--serif-latin);
   font-weight: 300;
   font-size: 40px;
+  line-height: 1.15;
   letter-spacing: .01em;
   color: var(--ink);
 }
@@ -172,6 +184,8 @@ h1, h2, h3, h4, p, ul, ol, dl, figure { margin: 0; }
   line-height: 1.95;
   max-width: var(--measure);
 }
+.entry__body p + p { margin-top: 1em; }
+.entry__body h2, .entry__body h3 { margin-top: 1.6em; font-weight: 400; }
 /* 正文里可能出现的代码块/表格：宽内容自己滚动，不撑破页面（全局验收要求）。 */
 .entry__body pre { overflow-x: auto; }
 .entry__body table { display: block; overflow-x: auto; }
@@ -245,7 +259,9 @@ a:hover {
 /* 动效降级 */
 @media (prefers-reduced-motion: reduce) {
   body[data-section="music"] .section-title,
-  body[data-section="admin"] .section-title {
+  body[data-section="music"] .masthead__title,
+  body[data-section="admin"] .section-title,
+  body[data-section="admin"] .masthead__title {
     animation: none;
     background-image: none;
     -webkit-background-clip: initial;
@@ -304,6 +320,7 @@ html.rail-collapsed .shell {
 .rail__sitename {
   font-family: var(--serif-latin);
   font-size: 22px;
+  line-height: 1.2;
   color: var(--on-deep);
   text-decoration: none;
 }
@@ -487,6 +504,8 @@ html.rail-collapsed .rail__collapsed {
   font-size: 11px;
   color: var(--on-deep);
 }
+.site-footer a { color: var(--accent-bright); text-decoration: none; }
+.site-footer a:hover { color: var(--on-deep); }
 
 @media (max-width: 700px) {
   .site-footer__grid { display: block; }
@@ -907,7 +926,7 @@ html.rail-collapsed .rail__collapsed {
 .music-embed { margin-top: 16px; max-width: 420px; }
 .music-recording { margin-top: 16px; }
 .music-recording__head { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--ink); margin-bottom: 8px; }
-.music-recording audio { width: 100%; }
+.music-recording audio { width: 100%; height: 40px; }
 .music-recording__note { margin-top: 8px; font-family: var(--serif-cjk); font-weight: 300; font-size: 13px; color: var(--ink-meta); }
 
 /* ---------- Apple Music facade ---------- */

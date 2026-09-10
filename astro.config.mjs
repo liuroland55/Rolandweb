@@ -10,6 +10,13 @@ export default defineConfig({
   site: 'https://shiyu.me',
   base: '/',
   output: 'static',
+  vite: {
+    build: {
+      // 不要把小字体文件 base64 内联进 CSS：Noto Serif SC 有上百个 unicode-range 分段，
+      // 小分段一旦内联，就会让所有分段不管用不用都随 CSS 下载，样式表体积翻倍。
+      assetsInlineLimit: 0,
+    },
+  },
   integrations: [
     mdx(),
     sitemap({

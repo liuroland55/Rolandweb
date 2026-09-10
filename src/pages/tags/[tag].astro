@@ -41,6 +41,7 @@ const { rows } = Astro.props as { rows: Row[] };
   mastheadTitle={`标签 · ${tag}`}
   mastheadMeta={`${rows.length} 条`}
   title={`标签：${tag}`}
+  description={`标签「${tag}」下的 ${rows.length} 条内容。`}
 >
   <ul class="archive-list">
     {rows.map((row) => (

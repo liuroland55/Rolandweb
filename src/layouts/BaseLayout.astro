@@ -2,6 +2,9 @@
 // 全站基础外壳：侧栏 + 主栏 + 页脚的两行两列网格。所有页面都经过这里，
 // 保证「侧边索引栏 + 全站页脚版权页每一页都有」这条硬约束不被绕开。
 import '../styles/global.css';
+import cjkFontsHref from '../styles/fonts-cjk.css?url';
+import spectralHref from '@fontsource/spectral/files/spectral-latin-300-normal.woff2?url';
+import monoHref from '@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2?url';
 import Sidebar from '../components/layout/Sidebar.astro';
 import SiteFooter from '../components/layout/SiteFooter.astro';
 
@@ -31,6 +34,9 @@ const siteTitle = title === '石予' ? title : `${title} · 石予`;
       })();
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- 报头与元信息首屏必用的两个西文字体：预加载省一个往返；中文字体走 body 末尾的样式表。 -->
+    <link rel="preload" as="font" type="font/woff2" crossorigin href={spectralHref} />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href={monoHref} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
     {description && <meta name="description" content={description} />}
@@ -48,5 +54,7 @@ const siteTitle = title === '石予' ? title : `${title} · 石予`;
       </main>
       <SiteFooter />
     </div>
+    <!-- 中文衬线的 @font-face 表放在 body 末尾：不阻塞首绘，字体到了再 swap。零 JS。 -->
+    <link rel="stylesheet" href={cjkFontsHref} fetchpriority="low" />
   </body>
 </html>

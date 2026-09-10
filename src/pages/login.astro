@@ -4,7 +4,7 @@
 import SectionLayout from '../layouts/SectionLayout.astro';
 import { apiUrl } from '../lib/auth';
 ---
-<SectionLayout section="all" mastheadTitle="友邻登录" title="友邻登录">
+<SectionLayout section="all" mastheadTitle="友邻登录" title="友邻登录" description="邮箱魔术链接登录，无密码，无第三方登录。">
   <div class="status-page">
     <p>没有密码，也没有第三方登录。留下邮箱，我会给你发一条十分钟内有效的一次性链接。</p>
     <form class="login-form" method="post" action={apiUrl('/api/login')} data-login-form>

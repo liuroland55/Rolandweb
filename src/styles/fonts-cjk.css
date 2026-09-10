@@ -1,0 +1,10 @@
+/*
+  中文衬线（Noto Serif SC）单独一份样式表，由 BaseLayout 放在 <body> 末尾加载，
+  而不是和 global.css 一起放在 <head>：
+  它的两个字重各有 101 段 unicode-range 的 @font-face，合起来 ~100KB，
+  放在 <head> 会阻塞首绘，Lighthouse 移动端模拟会把 FCP 拖到 3.5s；
+  放在 body 末尾则先用回退字体首绘、字体到了再 swap（font-display: swap 本来就允许这样）。
+  西文字体（Spectral / IBM Plex Mono）很小，仍留在 global.css 里同步加载。
+*/
+@import '@fontsource/noto-serif-sc/300.css';
+@import '@fontsource/noto-serif-sc/400.css';
