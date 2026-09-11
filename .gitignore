@@ -27,3 +27,6 @@ pnpm-debug.log*
 worker/.wrangler/
 worker/.dev.vars
 worker/node_modules/
+
+# agent-only reference doc, never pushed
+AGENT_GUIDE.md
