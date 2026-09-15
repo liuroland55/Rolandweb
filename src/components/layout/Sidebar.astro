@@ -97,36 +97,65 @@ const navItems = [
 </script>
 
 <script>
-  // 登录状态展示：向 Worker 要一次会话，登录了就把「友邻登录 →」换成昵称与分组。
+  // 登录状态展示：向 Worker 要一次会话，登录了就把「友邻登录 →」换成头像+昵称，
+  // 点击进入 Worker 上的账号管理页（/account，服务端渲染，不是 Astro 页面）。
   // 不算独立的第五个 island——是"登录/申请表单" island 在侧栏里的自然延伸（同一份会话判断逻辑）。
-  import { fetchSession } from '../../lib/auth';
+  import { fetchSession, apiUrl } from '../../lib/auth';
 
   fetchSession().then((result) => {
     if (result.status !== 'ok') return;
-    const { nickname, groups, visible_rolls } = result.session;
+    const { nickname, groups, visible_rolls, title_prefix, avatar_url } = result.session;
     const initial = nickname.slice(0, 1).toUpperCase();
     const groupLabel = groups[0] ?? '友邻';
+    const displayName = title_prefix ? `${title_prefix} ${nickname}` : nickname;
+    const accountUrl = apiUrl('/account');
+
+    function buildAvatar(): HTMLElement {
+      const avatar = document.createElement('span');
+      avatar.className = 'rail__avatar';
+      if (avatar_url) {
+        const img = document.createElement('img');
+        img.src = avatar_url;
+        img.alt = '';
+        avatar.append(img);
+      } else {
+        avatar.textContent = initial;
+      }
+      return avatar;
+    }
 
     document.querySelectorAll<HTMLElement>('[data-login-slot]').forEach((slot) => {
       slot.innerHTML = '';
-      const avatar = document.createElement('span');
-      avatar.className = 'rail__avatar';
-      avatar.textContent = initial;
+      const link = document.createElement('a');
+      link.className = 'rail__account-link';
+      link.href = accountUrl;
       const info = document.createElement('div');
       info.className = 'rail__login-info';
       const name = document.createElement('div');
       name.className = 'rail__login-name';
-      name.textContent = nickname;
+      name.textContent = displayName;
       const sub = document.createElement('div');
       sub.className = 'rail__login-sub';
       sub.textContent = `${groupLabel} · 可见 ${visible_rolls.length} 卷私相册`;
       info.append(name, sub);
-      slot.append(avatar, info);
+      link.append(buildAvatar(), info);
+      slot.append(link);
     });
 
     document.querySelectorAll<HTMLElement>('[data-login-avatar-slot]').forEach((slot) => {
-      slot.textContent = initial;
-      slot.classList.add('rail__collapsed-avatar--filled');
+      const link = document.createElement('a');
+      link.className = 'rail__collapsed-avatar rail__collapsed-avatar--filled';
+      link.href = accountUrl;
+      link.setAttribute('aria-label', '账号管理');
+      if (avatar_url) {
+        const img = document.createElement('img');
+        img.src = avatar_url;
+        img.alt = '';
+        link.append(img);
+      } else {
+        link.textContent = initial;
+      }
+      slot.replaceWith(link);
     });
   });
 </script>

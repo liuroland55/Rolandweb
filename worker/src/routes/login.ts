@@ -2,8 +2,11 @@ import type { Env } from '../env';
 import { json, readBody } from '../lib/http';
 import { randomToken } from '../lib/crypto';
 import { createMailer, magicLinkEmail } from '../lib/mail';
-import { checkLoginRateLimit } from '../lib/rateLimit';
+import { checkLoginRateLimit, checkPasswordLoginRateLimit } from '../lib/rateLimit';
 import { workerOrigin } from '../lib/cors';
+import { createSession, sessionCookieHeader } from '../lib/session';
+import { getUserByEmail, touchLastLogin } from '../lib/db';
+import { verifyPassword } from '../lib/password';
 
 export async function handleLogin(request: Request, env: Env): Promise<Response> {
   const body = await readBody(request);
@@ -31,4 +34,44 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
 
   if (wantsJson) return json({ ok: true });
   return Response.redirect(`${env.SITE_ORIGIN}/login?sent=1`, 303);
+}
+
+// 密码登录只是给"已经存在的账号"（邀请/魔法链接建的）追加的一种登录方式——
+// 不存在就凭邮箱+密码开新账号这回事，注册仍然只能走邀请链接，见 CLAUDE.md 架构备忘。
+// 跟魔法链接那条路径不同，这里失败就直说"邮箱或密码不对"：密码登录本来就没有
+// "无论账号是否存在都长得一样"这个隐私要求（对方已经在尝试一个具体的密码了）。
+export async function handleLoginPassword(request: Request, env: Env): Promise<Response> {
+  const body = await readBody(request);
+  const email = (body.email ?? '').trim().toLowerCase();
+  const password = body.password ?? '';
+  const wantsJson = request.headers.get('Accept')?.includes('application/json') ?? false;
+  const secure = new URL(request.url).protocol === 'https:';
+
+  const fail = (): Response =>
+    wantsJson ? json({ ok: false, error: 'invalid' }, { status: 401 }) : Response.redirect(`${env.SITE_ORIGIN}/login?invalid=1`, 303);
+
+  if (!email || !email.includes('@') || !password) return fail();
+
+  const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+  const allowed = await checkPasswordLoginRateLimit(env, ip, email);
+  if (!allowed) return fail();
+
+  const user = await getUserByEmail(env, email);
+  if (!user || !user.password_hash) return fail();
+
+  const ok = await verifyPassword(password, user.password_hash);
+  if (!ok) return fail();
+
+  await touchLastLogin(env, user.id);
+  const sessionToken = await createSession(env, user.id);
+  const cookie = sessionCookieHeader(sessionToken, secure);
+
+  if (wantsJson) {
+    const res = json({ ok: true });
+    res.headers.append('Set-Cookie', cookie);
+    return res;
+  }
+  const headers = new Headers({ Location: `${env.SITE_ORIGIN}/` });
+  headers.append('Set-Cookie', cookie);
+  return new Response(null, { status: 302, headers });
 }

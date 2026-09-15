@@ -8,6 +8,10 @@ export interface UserRow {
   role: 'admin' | 'member';
   created_at: string;
   last_login_at: string | null;
+  password_hash: string | null;
+  avatar_key: string | null;
+  signature: string | null;
+  title_prefix: string | null;
 }
 
 export interface AlbumRow {

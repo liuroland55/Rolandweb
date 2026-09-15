@@ -1,11 +1,17 @@
 ---
-// 登录页：一个邮箱输入框，零装饰。原生表单可用（POST 到 Worker），JS 只是让提交后
-// 不用整页跳转就能看到"已发送"的空状态说明——这是「登录/申请表单」island。
+// 登录页：邮箱魔术链接 + 账号密码两种方式，零装饰。原生表单可用（POST 到 Worker），
+// JS 只是让魔术链接提交后不用整页跳转就能看到"已发送"的空状态说明——这是
+// 「登录/申请表单」island；密码登录本身就是一次会改变登录状态的原生表单提交，
+// 不需要额外的 JS 反馈，失败了会带 ?invalid=1 整页刷新回这里。
 import SectionLayout from '../layouts/SectionLayout.astro';
 import { apiUrl } from '../lib/auth';
+
+const invalid = Astro.url.searchParams.get('invalid') === '1';
 ---
-<SectionLayout section="all" mastheadTitle="友邻登录" title="友邻登录" description="邮箱魔术链接登录，无密码，无第三方登录。">
+<SectionLayout section="all" mastheadTitle="友邻登录" title="友邻登录" description="邮箱魔术链接登录，或者用已经设置好的密码登录。">
   <div class="status-page">
+    {invalid && <p class="login-form__error">邮箱或密码不对，或者这条登录链接已经失效了。</p>}
+
     <p>没有密码，也没有第三方登录。留下邮箱，我会给你发一条十分钟内有效的一次性链接。</p>
     <form class="login-form" method="post" action={apiUrl('/api/login')} data-login-form>
       <label>
@@ -15,6 +21,21 @@ import { apiUrl } from '../lib/auth';
       <button type="submit">发送登录链接</button>
     </form>
     <p class="login-form__result" data-login-result hidden></p>
+
+    <div class="login-form__divider">或</div>
+
+    <p>如果你已经在「账号管理」里设置过密码，也可以直接用邮箱＋密码登录。</p>
+    <form class="login-form" method="post" action={apiUrl('/api/login/password')}>
+      <label>
+        邮箱
+        <input type="email" name="email" required autocomplete="email" />
+      </label>
+      <label>
+        密码
+        <input type="password" name="password" required autocomplete="current-password" />
+      </label>
+      <button type="submit">用密码登录</button>
+    </form>
   </div>
 </SectionLayout>
 

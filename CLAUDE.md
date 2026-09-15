@@ -17,7 +17,7 @@
    - Apple Music facade 点击加载
    - 登录 / 申请访问表单（progressive enhancement：原生 `<form method="post">` 可用，JS 只是让体验不刷新页面）
    - 相册页运行时拉取签名 URL（`/photos/[roll]`：页面本身是静态的，只知道卷名/张数/可见范围；真实图片地址必须在运行时向 Worker 请求，因为这是防止签名链接被打进构建产物的唯一方式——参见约束 5。这是登录 island 的自然延伸，不是新增自由度）
-   - `/admin`、`/write`、`/join/:token` **不算 island**：它们整体由 Worker 服务端渲染（在自己的 `*.workers.dev` 源上，见「架构备忘」），零客户端 JS，写操作用原生表单 POST。
+   - `/admin`、`/write`、`/join/:token`、`/account` **不算 island**：它们整体由 Worker 服务端渲染（在自己的 `*.workers.dev` 源上，见「架构备忘」），零客户端 JS，写操作用原生表单 POST。
 8. **第三方 iframe 默认不加载**（facade 模式），点击后才注入。
 
 ## 设计令牌（`src/styles/global.css`）
@@ -82,9 +82,14 @@
   3. **CSRF**：`SameSite=None` 削弱了浏览器默认的 CSRF 防护，靠 `worker/src/lib/csrf.ts` 补上——
      所有 POST 请求都要求 `Origin`（或 `Referer`）等于站点自己的源或 Worker 自己的源，
      在 `worker/src/index.ts` 的路由入口统一拦截，不需要每个路由自己判断。
-- `/admin`、`/write`、`/join/:token` 都在 Worker 自己的域名上，服务端渲染，零客户端 JS，写操作走原生
+- `/admin`、`/write`、`/join/:token`、`/account` 都在 Worker 自己的域名上，服务端渲染，零客户端 JS，写操作走原生
   `<form method="post">`。`/write`（创作者界面，admin 专用）把表单内容经 GitHub Contents API 提交进
   `src/content/`，GitHub token 只存在 Worker Secret 里，永远不进浏览器；提交后 Actions 自动重新部署。
+  `/account`（任何登录用户都能进）管账号自己的资料：昵称/签名/头衔前缀/头像（存进 `PHOTOS` 桶的
+  `avatars/<user id>` 前缀，公开读，不走签名链接——头像是用户自愿公开的东西，不是硬约束 5 的私密资源）、
+  密码（`worker/src/lib/password.ts`，PBKDF2-SHA256，只是给已有账号追加的登录方式，不开放凭密码
+  自建新账号，注册仍然只能走邀请链接）。admin 账号能在 `/account` 里看到一条「进入后台」链接。
+  侧栏的登录状态展示（既有的登录 island 的自然延伸）现在会把头像做成指向 `/account` 的链接。
 - 本地开发时 Astro 站与 Worker 是两个独立进程（各自的 `npm run dev` / `wrangler dev`）。
 - 私密数据永远不进入 Astro 的构建产物：`/photos/[roll]` 页面只包含「卷名/张数/可见范围」等公开元数据，
   真实图片地址（R2 签名 URL）只能在浏览器运行时向 Worker 请求。

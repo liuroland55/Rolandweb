@@ -1,7 +1,7 @@
 import type { Env } from './env';
 import { corsHeaders } from './lib/cors';
 import { isTrustedOrigin } from './lib/csrf';
-import { handleLogin } from './routes/login';
+import { handleLogin, handleLoginPassword } from './routes/login';
 import { handleCallback } from './routes/callback';
 import { handleLogout } from './routes/logout';
 import { handleMe } from './routes/me';
@@ -12,6 +12,8 @@ import { handleRequestAccess } from './routes/requestAccess';
 import { handleJoinPage, handleJoinSubmit } from './routes/join';
 import { handleAdmin } from './routes/admin';
 import { handleWrite } from './routes/write';
+import { handleAccount } from './routes/account';
+import { handleAvatar } from './routes/avatar';
 
 export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
@@ -54,6 +56,7 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   }
 
   if (pathname === '/api/login' && method === 'POST') return handleLogin(request, env);
+  if (pathname === '/api/login/password' && method === 'POST') return handleLoginPassword(request, env);
   if (pathname === '/api/callback' && method === 'GET') return handleCallback(request, env);
   if (pathname === '/api/logout' && method === 'POST') return handleLogout(request, env);
   if (pathname === '/api/me' && method === 'GET') return handleMe(request, env);
@@ -80,6 +83,11 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
     return handleAdmin(request, env, url);
   }
   if (pathname === '/write') return handleWrite(request, env);
+
+  if (pathname === '/account' || pathname.startsWith('/account/')) return handleAccount(request, env, url);
+  if (pathname.startsWith('/avatars/') && method === 'GET') {
+    return handleAvatar(env, decodeURIComponent(pathname.slice('/avatars/'.length)));
+  }
 
   return new Response('Not Found', { status: 404 });
 }

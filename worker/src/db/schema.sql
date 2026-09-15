@@ -8,7 +8,14 @@ CREATE TABLE IF NOT EXISTS users (
   nickname TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('admin', 'member')) DEFAULT 'member',
   created_at TEXT NOT NULL,
-  last_login_at TEXT
+  last_login_at TEXT,
+  -- 密码是给已有账号（邀请/魔法链接建的）追加的一种登录方式，不开放凭密码自建账号；
+  -- 格式 pbkdf2$<iterations>$<salt_hex>$<hash_hex>，见 lib/password.ts。为空表示还没设置过。
+  password_hash TEXT,
+  -- R2（PHOTOS 桶）里 avatars/<user id> 这个 key 是否存在，为空就还没传过头像。
+  avatar_key TEXT,
+  signature TEXT,
+  title_prefix TEXT
 );
 
 CREATE TABLE IF NOT EXISTS groups (

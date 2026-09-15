@@ -19,6 +19,8 @@ export interface Session {
   nickname: string;
   groups: string[];
   visible_rolls: string[];
+  title_prefix: string | null;
+  avatar_url: string | null;
 }
 
 export type SessionResult = { status: 'anon' } | { status: 'ok'; session: Session };
