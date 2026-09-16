@@ -1,4 +1,4 @@
-// 全站合流 RSS：文章 / 诗 / 笔记 / 乐 / 影，按日期倒序。
+// 全站合流 RSS：文章 / 诗 / 笔记 / 乐 / 影 / 乐队，按日期倒序。
 // 私密内容（相册、group/private 的 now）不进这里——见 CLAUDE.md 硬约束 5。
 import rss from '@astrojs/rss';
 import type { APIContext } from 'astro';
@@ -6,12 +6,13 @@ import { getCollection } from 'astro:content';
 import { withBase } from '../lib/site';
 
 export async function GET(context: APIContext) {
-  const [essays, poems, notes, music, films] = await Promise.all([
+  const [essays, poems, notes, music, films, band] = await Promise.all([
     getCollection('essays', (e) => e.data.draft !== true),
     getCollection('poems', (e) => e.data.draft !== true),
     getCollection('notes', (e) => e.data.draft !== true),
     getCollection('music', (e) => e.data.draft !== true),
     getCollection('films', (e) => e.data.draft !== true),
+    getCollection('band', (e) => e.data.draft !== true),
   ]);
 
   const items = [
@@ -43,6 +44,12 @@ export async function GET(context: APIContext) {
       title: `影 · ${e.data.title}`,
       pubDate: e.data.date,
       link: withBase('/films'),
+      description: e.body ?? '',
+    })),
+    ...band.map((e) => ({
+      title: `乐队 · ${e.data.title}`,
+      pubDate: e.data.date,
+      link: withBase('/band'),
       description: e.body ?? '',
     })),
   ].sort((a, b) => b.pubDate.getTime() - a.pubDate.getTime());

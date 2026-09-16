@@ -115,6 +115,12 @@ body[data-section="films"] {
   --accent-ink: oklch(.38 .07 60);
 }
 
+/* band：白纸 + 深酒红 */
+body[data-section="band"] {
+  --accent-deep: oklch(.30 .08 25);
+  --accent-ink: oklch(.38 .09 25);
+}
+
 /* photos：近乎无色，让照片出声 */
 body[data-section="photos"] {
   --accent-ink: oklch(.36 .01 150);
@@ -935,6 +941,34 @@ html.rail-collapsed .rail__collapsed {
 .music-recording audio { width: 100%; height: 40px; }
 .music-recording__note { margin-top: 8px; font-family: var(--serif-cjk); font-weight: 300; font-size: 13px; color: var(--ink-meta); }
 
+/* ---------- /band 页面 ---------- */
+.band-empty { font-family: var(--mono); font-size: 12px; color: var(--ink-meta); }
+.band-groups { display: flex; flex-direction: column; gap: 32px; }
+.band-group__title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--serif-cjk);
+  font-weight: 400;
+  font-size: 18px;
+  color: var(--ink);
+}
+.band-group__count { font-family: var(--mono); font-size: 11px; color: var(--ink-meta); }
+.band-pieces { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 18px; }
+.band-piece { padding-bottom: 18px; border-bottom: 1px solid var(--rule); }
+.band-piece:last-child { border-bottom: 0; padding-bottom: 0; }
+.band-piece__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.band-piece__title { font-family: var(--serif-latin); font-size: 15px; color: var(--ink); }
+.band-piece__composer { font-family: var(--mono); font-size: 10.5px; color: var(--ink-meta); }
+.band-piece__date { font-family: var(--mono); font-size: 10px; color: var(--ink-meta); margin-left: auto; white-space: nowrap; }
+.band-piece__note { margin: 6px 0 0; font-family: var(--serif-cjk); font-weight: 300; font-size: 13.5px; line-height: 1.7; color: var(--ink-meta); }
+.band-piece__links { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 14px; font-family: var(--mono); font-size: 11px; }
+.band-piece__links a { color: var(--accent-ink); text-decoration: none; }
+.band-piece__links a:hover { text-decoration: underline; }
+
 /* ---------- Apple Music facade ---------- */
 .am {
   border: 1px solid var(--rule);
@@ -1119,5 +1153,8 @@ body[data-section="poems"] .entry__body p { white-space: pre-line; }
   }
   body[data-section="films"] {
     --accent-ink: oklch(.68 .09 60);
+  }
+  body[data-section="band"] {
+    --accent-ink: oklch(.68 .09 25);
   }
 }

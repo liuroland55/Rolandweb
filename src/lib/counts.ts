@@ -4,7 +4,7 @@
 // 此时返回空数组即可，不影响骨架页面先跑起来；Phase 3 内容落地后这里无需再改。
 import { getCollection } from 'astro:content';
 
-type SectionName = 'essays' | 'poems' | 'notes' | 'music' | 'films' | 'photos' | 'now';
+type SectionName = 'essays' | 'poems' | 'notes' | 'music' | 'films' | 'photos' | 'now' | 'band';
 
 async function safeCollection(name: SectionName): Promise<any[]> {
   try {
@@ -21,6 +21,7 @@ export interface SectionCounts {
   notes: number;
   music: number;
   films: number;
+  band: number;
   /** 公开 + 好友组可见的相册卷数（不含 private） */
   photosRolls: number;
   /** 公开 + 好友组可见的照片总张数（不含 private） */
@@ -37,7 +38,7 @@ export interface SectionCounts {
 export type ArchiveYearCounts = Record<string, number>;
 
 export async function getSectionCounts(): Promise<SectionCounts> {
-  const [essays, poems, notes, music, films, photos, now] = await Promise.all([
+  const [essays, poems, notes, music, films, photos, now, band] = await Promise.all([
     safeCollection('essays'),
     safeCollection('poems'),
     safeCollection('notes'),
@@ -45,6 +46,7 @@ export async function getSectionCounts(): Promise<SectionCounts> {
     safeCollection('films'),
     safeCollection('photos'),
     safeCollection('now'),
+    safeCollection('band'),
   ]);
 
   const publicPhotos = photos.filter((p) => p.data.visibility !== 'private');
@@ -62,13 +64,14 @@ export async function getSectionCounts(): Promise<SectionCounts> {
     notes: notes.length,
     music: music.length,
     films: films.length,
+    band: band.length,
     photosRolls: publicPhotos.length,
     photosPhotos: publicPhotos.reduce((sum, p) => sum + (p.data.count ?? 0), 0),
     photosRestrictedRolls: restrictedPhotos.length,
     now: now.length,
     nowNewToday: now.filter((n) => isToday(new Date(n.data.date))).length,
     total:
-      essays.length + poems.length + notes.length + music.length + films.length + publicPhotos.length,
+      essays.length + poems.length + notes.length + music.length + films.length + band.length + publicPhotos.length,
   };
 }
 
@@ -80,6 +83,7 @@ export async function getArchiveCounts(): Promise<ArchiveYearCounts> {
     safeCollection('notes'),
     safeCollection('music'),
     safeCollection('films'),
+    safeCollection('band'),
   ]);
 
   const counts: ArchiveYearCounts = {};

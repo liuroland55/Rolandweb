@@ -5,12 +5,13 @@ import SectionLayout from '../layouts/SectionLayout.astro';
 import { formatDate, toISODate } from '../lib/format';
 import { withBase } from '../lib/site';
 
-const [essays, poems, notes, music, films, photos] = await Promise.all([
+const [essays, poems, notes, music, films, band, photos] = await Promise.all([
   getCollection('essays', (e) => e.data.draft !== true),
   getCollection('poems', (e) => e.data.draft !== true),
   getCollection('notes', (e) => e.data.draft !== true),
   getCollection('music', (e) => e.data.draft !== true),
   getCollection('films', (e) => e.data.draft !== true),
+  getCollection('band', (e) => e.data.draft !== true),
   getCollection('photos', (e) => e.data.draft !== true && e.data.visibility !== 'private'),
 ]);
 
@@ -27,6 +28,7 @@ const rows: Row[] = [
   ...notes.map((e) => ({ date: e.data.date, genre: '笔记', title: e.data.title })),
   ...music.map((e) => ({ date: e.data.date, genre: '乐', title: e.data.title, href: withBase('/music') })),
   ...films.map((e) => ({ date: e.data.date, genre: '影', title: e.data.title, href: withBase('/films') })),
+  ...band.map((e) => ({ date: e.data.date, genre: '乐队', title: e.data.title, href: withBase('/band') })),
   ...photos.map((e) => ({ date: e.data.shot_at, genre: '照片', title: e.data.title, href: withBase(`/photos/${e.data.roll}`) })),
 ].sort((a, b) => b.date.getTime() - a.date.getTime());
 

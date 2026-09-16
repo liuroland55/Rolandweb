@@ -8,7 +8,7 @@ import { renderPage, escapeHtml } from '../lib/html';
 import { readBody } from '../lib/http';
 import { randomId, randomToken } from '../lib/crypto';
 import { workerOrigin } from '../lib/cors';
-import { commitFile } from '../lib/github';
+import { commitFile, commitBinaryFile } from '../lib/github';
 import { yamlStr } from '../lib/yaml';
 
 async function requireAdmin(request: Request, env: Env): Promise<UserRow | null> {
@@ -63,6 +63,8 @@ export async function handleAdmin(request: Request, env: Env, url: URL): Promise
     const id = decodeURIComponent(path.slice('/admin/users/'.length));
     return updateUser(request, env, id);
   }
+
+  if (path === '/admin/band' && method === 'POST') return createBandPiece(request, env);
 
   if (path === '/admin/export' && method === 'GET') return exportUsersCsv(env);
 
@@ -230,6 +232,99 @@ async function createAlbum(request: Request, env: Env): Promise<Response> {
      </div>
      <p>照片本身和打包 zip 还没传——D1 只知道"这一卷存在、有几张"，实际文件要你自己传进 R2：</p>
      <pre style="background:var(--paper-panel);color:var(--ink);padding:14px;overflow-x:auto;font-family:var(--mono);font-size:11px;white-space:pre-wrap">${escapeHtml(uploadCmds.join('\n'))}</pre>`,
+    { admin: true },
+  );
+}
+
+const MAX_SCORE_BYTES = 8 * 1024 * 1024;
+const SCORE_EXT_BY_TYPE: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+};
+
+// 乐队曲目始终公开（跟站主商量过：曲谱本身不需要保密），所以不碰 D1，纯粹是一个
+// Astro 内容集合 + 一份可选的曲谱文件。曲谱直接提交进 public/scores/，
+// 跟头像一样是"后台直接上传"而不是让站主自己手动跑 wrangler 命令。
+async function createBandPiece(request: Request, env: Env): Promise<Response> {
+  const admin = await requireAdmin(request, env);
+  if (!admin) return new Response('Not Found', { status: 404 });
+
+  const form = await request.formData();
+  const title = String(form.get('title') ?? '').trim();
+  const slugInput = String(form.get('slug') ?? '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+  const slug = slugInput || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const date = String(form.get('date') ?? '').trim() || new Date().toISOString().slice(0, 10);
+  const category = String(form.get('category') ?? '').trim();
+  const composer = String(form.get('composer') ?? '').trim();
+  const linksRaw = String(form.get('links') ?? '');
+  const body = String(form.get('body') ?? '').trim();
+  const scoreFile = form.get('score');
+
+  if (!title) return renderDashboard(request, env, '曲目标题不能为空。');
+  if (!slug) return renderDashboard(request, env, '曲目 slug 不能为空（只允许 a-z 0-9 -）。');
+  if (!category) return renderDashboard(request, env, '分类不能为空——自己随便起一个，比如"原创"。');
+  if (!/^\d{4}-\d{2}-\d{2}/.test(date)) return renderDashboard(request, env, '日期格式不对。');
+
+  const links = linksRaw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [label, url] = line.split(/[|｜]/).map((p) => p.trim());
+      return { label: label || '链接', url: url ?? '' };
+    })
+    .filter((l) => l.url);
+
+  let scoreUrl = '';
+  let scoreFilename = '';
+  if (scoreFile instanceof File && scoreFile.size > 0) {
+    const ext = SCORE_EXT_BY_TYPE[scoreFile.type];
+    if (!ext) return renderDashboard(request, env, '曲谱只支持 PDF / PNG / JPEG / WEBP。');
+    if (scoreFile.size > MAX_SCORE_BYTES) return renderDashboard(request, env, '曲谱文件超过 8MB 了。');
+
+    const scorePath = `public/scores/${slug}.${ext}`;
+    const bytes = await scoreFile.arrayBuffer();
+    const scoreResult = await commitBinaryFile(env, scorePath, bytes, `asset(band): ${title} 曲谱`);
+    if (!scoreResult.ok) return renderDashboard(request, env, `曲谱上传失败：${scoreResult.error ?? '未知错误'}`);
+    scoreUrl = `/scores/${slug}.${ext}`;
+    scoreFilename = scoreFile.name || `${slug}.${ext}`;
+  }
+
+  const lines = ['---', `title: ${yamlStr(title)}`, `date: ${date}`, `category: ${yamlStr(category)}`];
+  if (composer) lines.push(`composer: ${yamlStr(composer)}`);
+  if (scoreUrl) {
+    lines.push('score:');
+    lines.push(`  url: ${yamlStr(scoreUrl)}`);
+    lines.push(`  filename: ${yamlStr(scoreFilename)}`);
+  }
+  if (links.length) {
+    lines.push('links:');
+    for (const l of links) {
+      lines.push(`  - label: ${yamlStr(l.label)}`);
+      lines.push(`    url: ${yamlStr(l.url)}`);
+    }
+  }
+  lines.push('---', '');
+  const markdown = body ? `\n${body}\n` : '';
+
+  const path = `src/content/band/${slug}.md`;
+  const result = await commitFile(env, path, lines.join('\n') + markdown, `content(band): ${title}`);
+
+  const origin = workerOrigin(request);
+  return renderPage(
+    '已新建乐队曲目',
+    `<div class="masthead"><h1>已新建乐队曲目</h1><span><a href="${origin}/admin">回后台 →</a></span></div>
+     <div class="panel">
+       <p>${escapeHtml(title)} · ${escapeHtml(category)}${scoreUrl ? ' · 已上传曲谱' : ''}</p>
+       ${
+         result.ok
+           ? `<p style="font-family:var(--mono);font-size:11px;word-break:break-all">${escapeHtml(path)}</p>
+              ${result.commitUrl ? `<p><a href="${escapeHtml(result.commitUrl)}">查看提交 →</a></p>` : '<p style="font-family:var(--mono);font-size:11px">（未配置 GITHUB_TOKEN：文件内容已打印在 Worker 日志里，没有真的写入仓库）</p>'}`
+           : `<p style="color:#e08">写内容文件失败：${escapeHtml(result.error ?? '未知错误')}${scoreUrl ? '（曲谱文件已经传上去了，换个 slug 重新提交一次内容文件就行）' : ''}</p>`
+       }
+     </div>`,
     { admin: true },
   );
 }
@@ -535,6 +630,25 @@ async function renderDashboard(request: Request, env: Env, error: string): Promi
        <label>打包下载大小标注（可选，如 218MB）<input type="text" name="download_size" /></label>
        <label>给朋友的一句话（可选，右页边批注）<input type="text" name="friend_note" /></label>
        <button type="submit">＋ 新建相册卷</button>
+     </form>
+
+     <h3 style="margin-top:32px">新建乐队曲目</h3>
+     <p style="font-family:var(--mono);font-size:10.5px;color:var(--ink-meta);max-width:480px">
+       乐队板块始终公开。分类是自己随便写的一个词（比如"原创"/"翻奏"/"改编"），
+       站点按当前实际用过的分类自动分组，不是预设列表。曲谱可以直接在这里传文件。
+     </p>
+     <form method="post" action="/admin/band" enctype="multipart/form-data">
+       <label>slug（只允许 a-z 0-9 -，留空按标题生成）<input type="text" name="slug" placeholder="比如 disorder-cover" /></label>
+       <label>标题<input type="text" name="title" required placeholder="比如 Disorder（翻奏）" /></label>
+       <label>分类<input type="text" name="category" required placeholder="比如 原创 / 翻奏 / 改编" /></label>
+       <label>日期<input type="date" name="date" /></label>
+       <label>作曲/原唱（可选）<input type="text" name="composer" /></label>
+       <label>曲谱文件（可选，PDF/PNG/JPEG/WEBP，8MB 以内）<input type="file" name="score" accept="application/pdf,image/png,image/jpeg,image/webp" /></label>
+       <label>链接（可选，每行一条，格式：名称｜网址）
+         <textarea name="links" rows="3" placeholder="录音｜https://...&#10;谱源｜https://..."></textarea>
+       </label>
+       <label>说明（可选）<textarea name="body" rows="3"></textarea></label>
+       <button type="submit">＋ 新建乐队曲目</button>
      </form>`,
     { admin: true },
   );

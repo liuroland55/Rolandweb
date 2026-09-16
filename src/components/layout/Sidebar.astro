@@ -6,7 +6,7 @@ import { getSectionCounts } from '../../lib/counts';
 import { withBase } from '../../lib/site';
 
 interface Props {
-  current?: 'all' | 'essays' | 'poems' | 'notes' | 'music' | 'films' | 'photos';
+  current?: 'all' | 'essays' | 'poems' | 'notes' | 'music' | 'films' | 'band' | 'photos';
 }
 const { current }: Props = Astro.props;
 
@@ -19,6 +19,7 @@ const navItems = [
   { key: 'notes', name: '笔记', href: withBase('/notes'), count: counts.notes },
   { key: 'music', name: '乐', href: withBase('/music'), count: counts.music },
   { key: 'films', name: '影', href: withBase('/films'), count: counts.films },
+  { key: 'band', name: '乐队', href: withBase('/band'), count: counts.band },
   { key: 'photos', name: '照片', href: withBase('/photos'), count: counts.photosRolls },
 ] as const;
 ---

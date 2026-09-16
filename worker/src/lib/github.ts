@@ -11,19 +11,27 @@ export interface CommitResult {
   error?: string;
 }
 
-function toBase64Utf8(text: string): string {
-  const bytes = new TextEncoder().encode(text);
+// 分块转 base64：逐字节 += 拼字符串对几 MB 的曲谱文件太慢，String.fromCharCode(...bytes)
+// 整个展开又会在字节数大时撞 JS 引擎的参数个数上限，0x8000 一段是两者都安全的折中。
+function bytesToBase64(bytes: Uint8Array): string {
+  const chunkSize = 0x8000;
   let binary = '';
-  for (const b of bytes) binary += String.fromCharCode(b);
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
   return btoa(binary);
 }
 
-export async function commitFile(env: Env, path: string, content: string, message: string): Promise<CommitResult> {
+function toBase64Utf8(text: string): string {
+  return bytesToBase64(new TextEncoder().encode(text));
+}
+
+async function putFile(env: Env, path: string, base64Content: string, message: string, logPreview: string): Promise<CommitResult> {
   if (!env.GITHUB_TOKEN) {
     // 分隔符不能用 "---"：内容本身就是带 YAML frontmatter 的 Markdown，也用 "---" 收尾，
     // 用同一个字符串当外层包装的分隔符会跟内容自己的分隔符撞在一起，日志里分不清哪个是哪个。
     console.log(
-      `[github:console] would commit ${path}\n===COMMIT MESSAGE===\n${message}\n===FILE CONTENT===\n${content}\n===END===`,
+      `[github:console] would commit ${path}\n===COMMIT MESSAGE===\n${message}\n===FILE CONTENT===\n${logPreview}\n===END===`,
     );
     return { ok: true, path, commitUrl: undefined };
   }
@@ -39,7 +47,7 @@ export async function commitFile(env: Env, path: string, content: string, messag
     'Content-Type': 'application/json',
   };
 
-  // 先看这个路径是否已存在：存在就拒绝，避免静默覆盖一篇旧文。
+  // 先看这个路径是否已存在：存在就拒绝，避免静默覆盖一篇旧文/旧文件。
   const probe = await fetch(`${url}?ref=${encodeURIComponent(branch)}`, { headers });
   if (probe.status === 200) {
     return { ok: false, path, error: '这个路径已经有文件了，换一个 slug。' };
@@ -48,7 +56,7 @@ export async function commitFile(env: Env, path: string, content: string, messag
   const res = await fetch(url, {
     method: 'PUT',
     headers,
-    body: JSON.stringify({ message, content: toBase64Utf8(content), branch }),
+    body: JSON.stringify({ message, content: base64Content, branch }),
   });
   if (!res.ok) {
     const text = await res.text();
@@ -57,4 +65,13 @@ export async function commitFile(env: Env, path: string, content: string, messag
   }
   const data = (await res.json()) as { commit?: { html_url?: string } };
   return { ok: true, path, commitUrl: data.commit?.html_url };
+}
+
+export async function commitFile(env: Env, path: string, content: string, message: string): Promise<CommitResult> {
+  return putFile(env, path, toBase64Utf8(content), message, content);
+}
+
+/** 跟 commitFile 一样，但给曲谱 PDF/图片这类二进制文件用——不经过 UTF-8 文本编码这一步。 */
+export async function commitBinaryFile(env: Env, path: string, bytes: ArrayBuffer, message: string): Promise<CommitResult> {
+  return putFile(env, path, bytesToBase64(new Uint8Array(bytes)), message, `<binary, ${bytes.byteLength} bytes>`);
 }

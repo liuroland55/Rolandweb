@@ -44,8 +44,8 @@
 
 字体：西文随 `global.css` 同步加载；中文 Noto Serif SC 在 `src/styles/fonts-cjk.css`，由 BaseLayout
 挂在 `<body>` 末尾异步生效（原因与性能数据见 README §8）。只引入真正用到的字重（300/400 + Mono 600）；
-所有文字元素保持数值 `line-height`，不要写 `line-height: normal`，否则字体换入会产生 CLS。五套现成主题：
-`poems`（冷白纸+深蓝）、`music`/`admin`（金属黑+条纹+sheen 动效）、`films`（暖褐）、
+所有文字元素保持数值 `line-height`，不要写 `line-height: normal`，否则字体换入会产生 CLS。现成主题：
+`poems`（冷白纸+深蓝）、`music`/`admin`（金属黑+条纹+sheen 动效）、`films`（暖褐）、`band`（酒红）、
 `photos`（近乎无色）、`essays`/`notes`/`now`（默认绿，不覆盖）。
 
 ## 如何加一个新栏目

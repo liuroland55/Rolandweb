@@ -1,0 +1,68 @@
+---
+// 乐队板块：曲目按分类分组，分类是自由文本（后台建曲目时手写），不是预设枚举——
+// 这里出现哪些分类完全取决于内容本身，页面只负责按当前存在的值分组、按日期倒序。
+import { getCollection } from 'astro:content';
+import SectionLayout from '../../layouts/SectionLayout.astro';
+import { formatDate, toISODate } from '../../lib/format';
+import { withBase } from '../../lib/site';
+
+const entries = (await getCollection('band', (e) => e.data.draft !== true)).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+);
+
+function latestInCategory(category: string): number {
+  return Math.max(...entries.filter((e) => e.data.category === category).map((e) => e.data.date.getTime()));
+}
+
+const categories = [...new Set(entries.map((e) => e.data.category))].sort(
+  (a, b) => latestInCategory(b) - latestInCategory(a),
+);
+---
+<SectionLayout
+  section="band"
+  mastheadTitle="乐队"
+  mastheadMeta={`${entries.length} 首 · ${categories.length} 类`}
+  title="乐队"
+  description="乐队曲目：曲谱与相关链接，按分类整理。"
+>
+  {entries.length === 0 ? (
+    <p class="band-empty">还没有曲目。</p>
+  ) : (
+    <div class="band-groups">
+      {categories.map((category) => {
+        const pieces = entries.filter((e) => e.data.category === category);
+        return (
+          <section class="band-group">
+            <h2 class="band-group__title">{category}<span class="band-group__count">{pieces.length}</span></h2>
+            <ul class="band-pieces">
+              {pieces.map((piece) => (
+                <li class="band-piece">
+                  <div class="band-piece__head">
+                    <span class="band-piece__title">{piece.data.title}</span>
+                    {piece.data.composer && <span class="band-piece__composer">{piece.data.composer}</span>}
+                    <time class="band-piece__date" datetime={toISODate(piece.data.date)}>
+                      {formatDate(piece.data.date, { withYear: false })}
+                    </time>
+                  </div>
+                  {piece.body && <p class="band-piece__note">{piece.body}</p>}
+                  {(piece.data.score || (piece.data.links && piece.data.links.length > 0)) && (
+                    <div class="band-piece__links">
+                      {piece.data.score && (
+                        <a href={withBase(piece.data.score.url)}>
+                          曲谱{piece.data.score.filename ? `（${piece.data.score.filename}）` : ''} →
+                        </a>
+                      )}
+                      {piece.data.links?.map((link) => (
+                        <a href={link.url} target="_blank" rel="noopener noreferrer">{link.label} →</a>
+                      ))}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
+    </div>
+  )}
+</SectionLayout>

@@ -13,11 +13,12 @@ interface Row {
 }
 
 export async function getStaticPaths() {
-  const [essays, notes, music, films] = await Promise.all([
+  const [essays, notes, music, films, band] = await Promise.all([
     getCollection('essays', (e) => e.data.draft !== true),
     getCollection('notes', (e) => e.data.draft !== true),
     getCollection('music', (e) => e.data.draft !== true),
     getCollection('films', (e) => e.data.draft !== true),
+    getCollection('band', (e) => e.data.draft !== true),
   ]);
 
   const rows: Row[] = [
@@ -25,6 +26,7 @@ export async function getStaticPaths() {
     ...notes.map((e) => ({ date: e.data.date, genre: '笔记', title: e.data.title, href: withBase('/notes'), tags: e.data.tags ?? [] })),
     ...music.map((e) => ({ date: e.data.date, genre: '乐', title: e.data.title, href: withBase('/music'), tags: e.data.tags ?? [] })),
     ...films.map((e) => ({ date: e.data.date, genre: '影', title: e.data.title, href: withBase('/films'), tags: e.data.tags ?? [] })),
+    ...band.map((e) => ({ date: e.data.date, genre: '乐队', title: e.data.title, href: withBase('/band'), tags: e.data.tags ?? [] })),
   ];
 
   const tagSet = new Set(rows.flatMap((r) => r.tags));
