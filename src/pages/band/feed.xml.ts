@@ -12,7 +12,7 @@ export async function GET(context: APIContext) {
     items: band
       .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
       .map((e) => ({
-        title: `${e.data.category} · ${e.data.title}`,
+        title: `${e.data.instrument} · ${e.data.title}`,
         pubDate: e.data.date,
         link: withBase('/band'),
         description: e.body ?? '',

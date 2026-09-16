@@ -1,6 +1,6 @@
 ---
-// 乐队板块：曲目按分类分组，分类是自由文本（后台建曲目时手写），不是预设枚举——
-// 这里出现哪些分类完全取决于内容本身，页面只负责按当前存在的值分组、按日期倒序。
+// 乐队板块：曲目按乐器分组，乐器是自由文本（后台建曲目时手写），不是预设枚举——
+// 这里出现哪些乐器完全取决于内容本身，页面只负责按当前存在的值分组、按日期倒序。
 import { getCollection } from 'astro:content';
 import SectionLayout from '../../layouts/SectionLayout.astro';
 import { formatDate, toISODate } from '../../lib/format';
@@ -10,30 +10,30 @@ const entries = (await getCollection('band', (e) => e.data.draft !== true)).sort
   (a, b) => b.data.date.getTime() - a.data.date.getTime(),
 );
 
-function latestInCategory(category: string): number {
-  return Math.max(...entries.filter((e) => e.data.category === category).map((e) => e.data.date.getTime()));
+function latestInInstrument(instrument: string): number {
+  return Math.max(...entries.filter((e) => e.data.instrument === instrument).map((e) => e.data.date.getTime()));
 }
 
-const categories = [...new Set(entries.map((e) => e.data.category))].sort(
-  (a, b) => latestInCategory(b) - latestInCategory(a),
+const instruments = [...new Set(entries.map((e) => e.data.instrument))].sort(
+  (a, b) => latestInInstrument(b) - latestInInstrument(a),
 );
 ---
 <SectionLayout
   section="band"
   mastheadTitle="乐队"
-  mastheadMeta={`${entries.length} 首 · ${categories.length} 类`}
+  mastheadMeta={`${entries.length} 首 · ${instruments.length} 种乐器`}
   title="乐队"
-  description="乐队曲目：曲谱与相关链接，按分类整理。"
+  description="乐队曲目：曲谱与相关链接，按乐器整理。"
 >
   {entries.length === 0 ? (
     <p class="band-empty">还没有曲目。</p>
   ) : (
     <div class="band-groups">
-      {categories.map((category) => {
-        const pieces = entries.filter((e) => e.data.category === category);
+      {instruments.map((instrument) => {
+        const pieces = entries.filter((e) => e.data.instrument === instrument);
         return (
           <section class="band-group">
-            <h2 class="band-group__title">{category}<span class="band-group__count">{pieces.length}</span></h2>
+            <h2 class="band-group__title">{instrument}<span class="band-group__count">{pieces.length}</span></h2>
             <ul class="band-pieces">
               {pieces.map((piece) => (
                 <li class="band-piece">

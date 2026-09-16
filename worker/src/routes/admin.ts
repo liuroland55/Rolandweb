@@ -237,16 +237,12 @@ async function createAlbum(request: Request, env: Env): Promise<Response> {
 }
 
 const MAX_SCORE_BYTES = 8 * 1024 * 1024;
-const SCORE_EXT_BY_TYPE: Record<string, string> = {
-  'application/pdf': 'pdf',
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/webp': 'webp',
-};
+const SCORE_MIME = 'application/pdf';
 
 // 乐队曲目始终公开（跟站主商量过：曲谱本身不需要保密），所以不碰 D1，纯粹是一个
-// Astro 内容集合 + 一份可选的曲谱文件。曲谱直接提交进 public/scores/，
-// 跟头像一样是"后台直接上传"而不是让站主自己手动跑 wrangler 命令。
+// Astro 内容集合 + 一份可选的曲谱文件（只收 PDF）。按乐器区分——instrument 是自由文本，
+// 不是预设枚举。曲谱直接提交进 public/scores/，跟头像一样是"后台直接上传"，
+// 不用站主自己手动跑 wrangler 命令。
 async function createBandPiece(request: Request, env: Env): Promise<Response> {
   const admin = await requireAdmin(request, env);
   if (!admin) return new Response('Not Found', { status: 404 });
@@ -256,7 +252,7 @@ async function createBandPiece(request: Request, env: Env): Promise<Response> {
   const slugInput = String(form.get('slug') ?? '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
   const slug = slugInput || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   const date = String(form.get('date') ?? '').trim() || new Date().toISOString().slice(0, 10);
-  const category = String(form.get('category') ?? '').trim();
+  const instrument = String(form.get('instrument') ?? '').trim();
   const composer = String(form.get('composer') ?? '').trim();
   const linksRaw = String(form.get('links') ?? '');
   const body = String(form.get('body') ?? '').trim();
@@ -264,7 +260,7 @@ async function createBandPiece(request: Request, env: Env): Promise<Response> {
 
   if (!title) return renderDashboard(request, env, '曲目标题不能为空。');
   if (!slug) return renderDashboard(request, env, '曲目 slug 不能为空（只允许 a-z 0-9 -）。');
-  if (!category) return renderDashboard(request, env, '分类不能为空——自己随便起一个，比如"原创"。');
+  if (!instrument) return renderDashboard(request, env, '乐器不能为空——自己随便起一个，比如"吉他"。');
   if (!/^\d{4}-\d{2}-\d{2}/.test(date)) return renderDashboard(request, env, '日期格式不对。');
 
   const links = linksRaw
@@ -280,19 +276,18 @@ async function createBandPiece(request: Request, env: Env): Promise<Response> {
   let scoreUrl = '';
   let scoreFilename = '';
   if (scoreFile instanceof File && scoreFile.size > 0) {
-    const ext = SCORE_EXT_BY_TYPE[scoreFile.type];
-    if (!ext) return renderDashboard(request, env, '曲谱只支持 PDF / PNG / JPEG / WEBP。');
+    if (scoreFile.type !== SCORE_MIME) return renderDashboard(request, env, '曲谱只支持 PDF。');
     if (scoreFile.size > MAX_SCORE_BYTES) return renderDashboard(request, env, '曲谱文件超过 8MB 了。');
 
-    const scorePath = `public/scores/${slug}.${ext}`;
+    const scorePath = `public/scores/${slug}.pdf`;
     const bytes = await scoreFile.arrayBuffer();
     const scoreResult = await commitBinaryFile(env, scorePath, bytes, `asset(band): ${title} 曲谱`);
     if (!scoreResult.ok) return renderDashboard(request, env, `曲谱上传失败：${scoreResult.error ?? '未知错误'}`);
-    scoreUrl = `/scores/${slug}.${ext}`;
-    scoreFilename = scoreFile.name || `${slug}.${ext}`;
+    scoreUrl = `/scores/${slug}.pdf`;
+    scoreFilename = scoreFile.name || `${slug}.pdf`;
   }
 
-  const lines = ['---', `title: ${yamlStr(title)}`, `date: ${date}`, `category: ${yamlStr(category)}`];
+  const lines = ['---', `title: ${yamlStr(title)}`, `date: ${date}`, `instrument: ${yamlStr(instrument)}`];
   if (composer) lines.push(`composer: ${yamlStr(composer)}`);
   if (scoreUrl) {
     lines.push('score:');
@@ -317,7 +312,7 @@ async function createBandPiece(request: Request, env: Env): Promise<Response> {
     '已新建乐队曲目',
     `<div class="masthead"><h1>已新建乐队曲目</h1><span><a href="${origin}/admin">回后台 →</a></span></div>
      <div class="panel">
-       <p>${escapeHtml(title)} · ${escapeHtml(category)}${scoreUrl ? ' · 已上传曲谱' : ''}</p>
+       <p>${escapeHtml(title)} · ${escapeHtml(instrument)}${scoreUrl ? ' · 已上传曲谱' : ''}</p>
        ${
          result.ok
            ? `<p style="font-family:var(--mono);font-size:11px;word-break:break-all">${escapeHtml(path)}</p>
@@ -634,16 +629,16 @@ async function renderDashboard(request: Request, env: Env, error: string): Promi
 
      <h3 style="margin-top:32px">新建乐队曲目</h3>
      <p style="font-family:var(--mono);font-size:10.5px;color:var(--ink-meta);max-width:480px">
-       乐队板块始终公开。分类是自己随便写的一个词（比如"原创"/"翻奏"/"改编"），
-       站点按当前实际用过的分类自动分组，不是预设列表。曲谱可以直接在这里传文件。
+       乐队板块始终公开，按乐器区分。乐器是自己随便写的一个词（比如"吉他"/"贝斯"/"鼓"），
+       站点按当前实际用过的乐器自动分组，不是预设列表。曲谱只收 PDF，可以直接在这里传文件。
      </p>
      <form method="post" action="/admin/band" enctype="multipart/form-data">
        <label>slug（只允许 a-z 0-9 -，留空按标题生成）<input type="text" name="slug" placeholder="比如 disorder-cover" /></label>
        <label>标题<input type="text" name="title" required placeholder="比如 Disorder（翻奏）" /></label>
-       <label>分类<input type="text" name="category" required placeholder="比如 原创 / 翻奏 / 改编" /></label>
+       <label>乐器<input type="text" name="instrument" required placeholder="比如 吉他 / 贝斯 / 鼓 / 主唱" /></label>
        <label>日期<input type="date" name="date" /></label>
        <label>作曲/原唱（可选）<input type="text" name="composer" /></label>
-       <label>曲谱文件（可选，PDF/PNG/JPEG/WEBP，8MB 以内）<input type="file" name="score" accept="application/pdf,image/png,image/jpeg,image/webp" /></label>
+       <label>曲谱文件（可选，仅 PDF，8MB 以内）<input type="file" name="score" accept="application/pdf" /></label>
        <label>链接（可选，每行一条，格式：名称｜网址）
          <textarea name="links" rows="3" placeholder="录音｜https://...&#10;谱源｜https://..."></textarea>
        </label>

@@ -125,16 +125,16 @@ const photos = defineCollection({
   }),
 });
 
-// 乐队：站主自己乐队的曲目，每个文件一首。分类是自由文本（"自行分类"），
-// 不是预设的枚举——列表页按这个字段分组，出现哪些分类完全由写文件的人决定。
+// 乐队：站主自己乐队的曲目，每个文件一首。按乐器区分（吉他/贝斯/鼓/主唱……），
+// 自由文本，不是预设的枚举——列表页按这个字段分组，出现哪些乐器完全由写文件的人决定。
 const band = defineCollection({
   loader: collectionOf('band'),
   schema: z.object({
     ...commonFields,
-    category: z.string(),
+    instrument: z.string(),
     composer: z.string().optional(),
     // url 是站内相对路径（曲谱文件提交进 public/scores/ 之后的地址），渲染时要走 withBase()，
-    // 跟站内其他手写链接一个道理，见 CLAUDE.md 架构备忘。
+    // 跟站内其他手写链接一个道理，见 CLAUDE.md 架构备忘。曲谱只收 PDF。
     score: z
       .object({
         url: z.string(),

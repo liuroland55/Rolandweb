@@ -1,7 +1,7 @@
 ---
 title: Disorder（翻奏）
 date: 2026-08-10
-category: 翻奏
+instrument: 贝斯
 composer: Joy Division
 links:
   - label: 录音
