@@ -30,17 +30,29 @@ const {
   dark = true,
 } = Astro.props;
 
+// Apple 的嵌入/分享链接压根没有 "song" 这个路径类型（MusicKit JS 的 generateEmbedCode
+// 只认 album / playlist / musicVideo）：单曲也是走 "/album/{专辑 slug}/{专辑 id}"，
+// 靠 ?i={单曲 id} 落到具体那一条。kind: 'song' 只是我们 schema 自己的语义标记
+// （决定要不要带 i、卡片高度），拼真实 URL 时必须把它映射回 'album'，
+// 不然 https://embed.music.apple.com/us/song/... 这条路径本身就不存在。
+function embedPathType(): string {
+  return kind === 'song' ? 'album' : kind;
+}
+
 function appleMusicUrl() {
   const safeSlug = slug ?? kind;
   const params = new URLSearchParams();
   if (kind === 'song' && i) params.set('i', i);
   if (dark) params.set('theme', 'dark');
   const qs = params.toString();
-  return `https://embed.music.apple.com/${storefront}/${kind}/${encodeURIComponent(safeSlug)}/${id}${qs ? `?${qs}` : ''}`;
+  return `https://embed.music.apple.com/${storefront}/${embedPathType()}/${encodeURIComponent(safeSlug)}/${id}${qs ? `?${qs}` : ''}`;
 }
 
 function appleMusicWebUrl() {
-  return `https://music.apple.com/${storefront}/${kind}/${encodeURIComponent(slug ?? kind)}/${id}`;
+  const params = new URLSearchParams();
+  if (kind === 'song' && i) params.set('i', i);
+  const qs = params.toString();
+  return `https://music.apple.com/${storefront}/${embedPathType()}/${encodeURIComponent(slug ?? kind)}/${id}${qs ? `?${qs}` : ''}`;
 }
 
 const embedUrl = provider === 'apple' ? appleMusicUrl() : '';
