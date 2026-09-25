@@ -6,7 +6,7 @@ import { getSectionCounts } from '../../lib/counts';
 import { withBase } from '../../lib/site';
 
 interface Props {
-  current?: 'all' | 'essays' | 'poems' | 'notes' | 'music' | 'films' | 'band' | 'photos';
+  current?: 'all' | 'about' | 'essays' | 'poems' | 'notes' | 'music' | 'films' | 'band' | 'photos';
 }
 const { current }: Props = Astro.props;
 
@@ -14,6 +14,7 @@ const counts = await getSectionCounts();
 
 const navItems = [
   { key: 'all', name: '全部', href: withBase('/'), count: counts.total },
+  { key: 'about', name: '了解我', href: withBase('/about'), count: undefined as number | undefined },
   { key: 'essays', name: '文章', href: withBase('/essays'), count: counts.essays },
   { key: 'poems', name: '诗', href: withBase('/poems'), count: counts.poems },
   { key: 'notes', name: '笔记', href: withBase('/notes'), count: counts.notes },
@@ -36,7 +37,7 @@ const navItems = [
         <li class={current === item.key ? 'is-current' : ''}>
           <a href={item.href}>
             <span class:list={['rail__name', item.key === 'poems' && 'rail__name--poem']}>{item.name}</span>
-            <span class="rail__count">{item.count}</span>
+            {item.count !== undefined && <span class="rail__count">{item.count}</span>}
           </a>
         </li>
       ))}
@@ -69,7 +70,7 @@ const navItems = [
       <li class={current === item.key ? 'is-current' : ''}>
         <a href={item.href}>
           <span class:list={['rail__name', item.key === 'poems' && 'rail__name--poem']}>{item.name}</span>
-          <span class="rail__count">{item.count}</span>
+          {item.count !== undefined && <span class="rail__count">{item.count}</span>}
         </a>
       </li>
     ))}
